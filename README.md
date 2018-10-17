@@ -1,3 +1,5 @@
+# Assuming that you already installed openai gym (https://github.com/openai/gym)
+
 # reinmav-gym
 openai gym environment for reinforcement quadrotor
 
