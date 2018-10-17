@@ -30,3 +30,9 @@ reset() called
 step() called
 render() called
 ```
+
+# openai gym example environments
+* Continuous mountain car: https://github.com/openai/gym/blob/master/gym/envs/classic_control/continuous_mountain_car.py
+* Cart pole: https://github.com/openai/gym/blob/master/gym/envs/classic_control/cartpole.py
+* Pendulum: https://github.com/openai/gym/blob/master/gym/envs/classic_control/pendulum.py
+
