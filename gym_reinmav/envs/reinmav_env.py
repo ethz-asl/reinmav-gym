@@ -23,17 +23,36 @@ import numpy as np
 from timeit import default_timer as timer
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
+
+# For testing whether a number is close to zero
+_FLOAT_EPS = np.finfo(np.float64).eps
+_EPS4 = _FLOAT_EPS * 4.0
 
 class ReinmavEnv(gym.Env):
 	metadata = {'render.modes': ['human']}
 	def __init__(self):
+		print("__init__ called")
+		self.arm_length = 0.0860 #in meter 
+		self.mass = 0.1800 # in kg
+		self.gravity=9.8100 # in kg/
+		self.min_force=0
+		self.max_force=3.5316 # in N
+		self.Inertia= np.matrix([[0.00025, 0 , 2.55e-06],
+							 [0,0.000232,0],
+							 [2.55e-06,0,0.0003738]])
+		self.invInertia=self.Inertia.getI()
+		#print("Inertia=",self.Inertia)
+		#print("invInertia=",self.invInertia)
+
 		self.min_action = -100.0
 		self.max_action = 100.0 #in N/m, Force
 		self.min_position = -100 #in meter
 		self.max_position = 100
 		self.max_speed = 100 #in m/s
 		self.goal_position = 0.45 # was 0.5 in gym, 0.45 in Arnaud de Broissia's version
-		
+
 		self.low_state = np.array([self.min_position, -self.max_speed])
 		self.high_state = np.array([self.max_position, self.max_speed])
 
@@ -45,9 +64,17 @@ class ReinmavEnv(gym.Env):
 		self.m=10 #kg
 		self.k=50 #N/m
 		self.c=1/2*np.sqrt(self.k*self.m) #Critical damping
-		self.c1=self.c/self.m;
-		self.c2=self.k/self.m;
-		self.init_state=[10.0,10.0] #init value for position and velocity.
+		self.c1=self.c/self.m
+		self.c2=self.k/self.m
+		self.max_force=3.5316 #N
+		self.min_force=0
+
+		self.force=[1.765857676074257] #1x1
+		self.moment=[-0.00788085922907771,
+			-2.52982080208154e-08,
+			-0.000112674126155975] #the Inertial moment along x,y,z axis.
+		self.init_state=[5.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0] #init value for [x, y, z, dx, dy, dz, qw, qx, qy, qz, p, q, r]
+		self.t=0
 		self.dt=1.0/100.0 #10ms
 		self.action=0
 		self.state=self.init_state
@@ -55,29 +82,39 @@ class ReinmavEnv(gym.Env):
 		self.seed()
 		self.cum_state=self.state
 		#self.reset()
+		#print("state1=",self.state)
+		#self.quad_eq_of_motion()
 	def seed(self, seed=None):
+		print("seed")
 		self.np_random, seed = seeding.np_random(seed)
 		return [seed]
 
 	def step(self, action):
+		print("step")
 		self.action=action
 		start = timer()
-		state = odeint(self.mass_spring_damping, self.state, [0,self.dt])
-		self.state = state[-1]
+		state = odeint(self.quad_eq_of_motion, self.state, [0,self.dt]) #takes about 4.6795ms
+		print("ode return state=",state)
+		print("state.shape=",state.shape)
+		self.state = state[-1] # We only care about the state at the ''final timestep'', self.dt
+		print("self.state.shape=",self.state.shape)
+
 		self.cum_state = np.vstack([self.cum_state,self.state])
-		position = self.state[0] # We only care about the state at the ''final timestep'', self.dt
-		velocity = self.state[1]
-		done = bool(position >= self.goal_position)
+		#position = self.state[0] # We only care about the state at the ''final timestep'', self.dt
+		#velocity = self.state[1]
+		done = bool(self.state[0] >= self.goal_position)
 		reward = 0
 		if done:
 			reward = 100.0
 		reward-= math.pow(action,2)*0.1
-		self.state = np.array([position, velocity])
+		#self.state = np.array([position, velocity])
+		#self.state = state
 		end = timer()
-		#print("step odeint duration={:0.4f}ms".format((end - start)*1e3)) #in us
+		print("step odeint duration={:0.4f}ms".format((end - start)*1e3)) #in us
 		return self.state, reward, done, {}
 
 	def plot_state(self):
+		print("plot_state")
 		t=np.arange(0.0,len(self.cum_state)*self.dt,self.dt)
 		plt.plot(t, self.cum_state)
 		plt.title("title")
@@ -87,14 +124,157 @@ class ReinmavEnv(gym.Env):
 		plt.show()
 		
 	def mass_spring_damping(self,state,t):
+		print("mass_spring_damping")
 		# 1st order ODE
 		ret0 = state[1] #vel
 		ret1 = self.action/self.m-self.c1*state[1]-self.c2*state[0] #acc, input is force not accelation
 		# return the two state derivatives
 		return [ret0, ret1]
 
+	def quad_eq_of_motion(self,state,t):
+			print("quad_eq_of_motion")
+			print("state=",state.shape)
+			"""output the derivative of the state vector"""
+			A = np.matrix([ [0.25,0, -0.5/self.arm_length],
+				[0.25,0.5/self.arm_length,0.],
+				[0.25,0,0.5/self.arm_length],
+				[0.25,-0.5/self.arm_length,0]])
+			# print("A_",A)
+			# A = A.astype(float)
+			# print("A_after",A)
+			#test=
+			#print("test=",np.asmatrix(test))
+			print("self.force=",self.force)
+			print("self.moment[:2]=",self.moment[:2])
+			a=np.hstack((self.force,self.moment[:2]))
+			print("test=",a.reshape(3,1))
+			#temp=
+			#print("temp=",temp)
+			T=A*np.asmatrix(np.hstack((self.force,self.moment[:2]))).transpose()
+			#print("T=",T)
+			T_clamped=np.maximum(np.minimum(T,self.max_force/4.0),self.min_force/4.0)
+			#print("T_clamped=",T_clamped)
+			B = np.matrix([[1.0,1.0,1.0,1.0],
+							[0.0,self.arm_length,0.0,-self.arm_length],
+							[-self.arm_length,0.0,self.arm_length,0.]])
+			#ttt=B[0,]
+			#print("B=",ttt)
+			self.force = B[[0],:]*T_clamped;
+			self.force = np.array(self.force).reshape(-1,).tolist()
+			#tt=B[[1,2],:]
+			#print("test=",B[[1,2],:]*np.asmatrix(T_clamped))
+			print("force=",self.force)
+			self.moment = np.vstack(  (B[[1,2],:]*np.asmatrix(T_clamped),  self.moment[2]));
+			print("moment=",self.moment)
+			self.moment = np.array(self.moment).reshape(-1,).tolist()
+			#Assign 13 states
+			x = self.state[0]
+			y = self.state[1]
+			z = self.state[2]
+			xdot = self.state[3];
+			ydot = self.state[4];
+			zdot = self.state[5];
+			qW = self.state[6];
+			qX = self.state[7];
+			qY = self.state[8];
+			qZ = self.state[9];
+			p = self.state[10];
+			q = self.state[11];
+			r = self.state[12];
+
+			quat = np.vstack((qW,qX,qY,qZ)); #!! Attention to the order!!
+			#quat = quat.reshape(1,4)
+			#print("quat",quat)
+			#print("quat.shape=",quat.shape)
+			bRw=self.quat2mat(quat.transpose())
+			bRw=bRw.reshape(3,3) #to remove the last dimension i.e., 3,3,1
+			#print("bRw=",bRw)
+			wRb = bRw.transpose()
+
+			# bRw = QuatToRot(quat);
+			# wRb = bRw';
+			#print("wRb=",wRb)
+			#print("wRb.shape=",wRb.shape)
+			
+			# Acceleration
+			# accel = 1 / params.mass * (wRb * [0; 0; F] - [0; 0; params.mass * params.gravity]);
+			accel = 1.0 / self.mass * (wRb * np.matrix([[0],[0],self.force]) - np.matrix([[0],[0],[self.mass * self.gravity]]));
+			#print("accel1=",accel)
+			#print("accel1.shape=",accel.shape)
+			#print("accel2=",np.array(accel))
+			#print("accel2.shape=",np.array(accel).shape)
+			
+			accel = np.array(accel).reshape(-1,).tolist()
+			#print("accel=",accel)
+			# Angular velocity
+			K_quat = 2.0; #%this enforces the magnitude 1 constraint for the quaternion
+			quaterror = 1 - (qW**2 + qX**2 + qY**2 + qZ**2);
+			qdot = -1/2*np.matrix([ [0,-p,-q,-r],[p,0,-r,q],[q,r,0,-p],[r,-q,p,0]])*quat + K_quat*quaterror * quat
+			qdot = np.array(qdot).reshape(-1,).tolist()
+			#print("qdot=",qdot)
+			# qdot = -1/2*[0, -p, -q, -r;...
+			#      p,  0, -r,  q;...
+			#      q,  r,  0, -p;...
+			#      r, -q,  p,  0] * quat + K_quat*quaterror * quat;
+
+			# % Angular acceleration
+			omega = [p,q,r] #np.vstack((p,q,r))
+			#omega=omega.reshape(3,)
+			#print("omega=",omega)
+			#print("omega.shape=",omega.shape)
+			#print("cross=",np.cross(np.asarray(omega), np.asarray(self.Inertia*omega)))
+			a_temp=np.array(omega).reshape(-1,).tolist() 
+			b_temp=np.array(self.Inertia*np.asmatrix(omega).reshape(3,1)).reshape(-1,).tolist() 
+			#print("cross=",np.cross(omega,b_temp))
+			c_temp=np.matrix(np.cross(omega,b_temp)).reshape(3,1)
+			pqrdot   = self.invInertia * (self.moment - c_temp);
+			pqrdot = np.array(pqrdot).reshape(-1,).tolist()
+			#print("pqrdot=",pqrdot)
+			sdot=[]
+			sdot.append(xdot)
+			sdot.append(ydot)
+			sdot.append(zdot)
+			sdot.append(accel[0])
+			sdot.append(accel[1])
+			sdot.append(accel[2])
+			sdot.append(qdot[0])
+			sdot.append(qdot[1])
+			sdot.append(qdot[2])
+			sdot.append(qdot[3])
+			sdot.append(pqrdot[0])
+			sdot.append(pqrdot[1])
+			sdot.append(pqrdot[2])
+			print("sdot=",sdot)
+			return sdot
+	#steal from rotations.py
+	def quat2mat(self,quat):
+	    """ Convert Quaternion to Euler Angles.  See rotation.py for notes """
+	    quat = np.asarray(quat, dtype=np.float64)
+	    assert quat.shape[-1] == 4, "Invalid shape quat {}".format(quat)
+
+	    w, x, y, z = quat[..., 0], quat[..., 1], quat[..., 2], quat[..., 3]
+	    Nq = np.sum(quat * quat, axis=-1)
+	    s = 2.0 / Nq
+	    X, Y, Z = x * s, y * s, z * s
+	    wX, wY, wZ = w * X, w * Y, w * Z
+	    xX, xY, xZ = x * X, x * Y, x * Z
+	    yY, yZ, zZ = y * Y, y * Z, z * Z
+
+	    mat = np.empty(quat.shape[:-1] + (3, 3), dtype=np.float64)
+	    mat[..., 0, 0] = 1.0 - (yY + zZ)
+	    mat[..., 0, 1] = xY - wZ
+	    mat[..., 0, 2] = xZ + wY
+	    mat[..., 1, 0] = xY + wZ
+	    mat[..., 1, 1] = 1.0 - (xX + zZ)
+	    mat[..., 1, 2] = yZ - wX
+	    mat[..., 2, 0] = xZ - wY
+	    mat[..., 2, 1] = yZ + wX
+	    mat[..., 2, 2] = 1.0 - (xX + yY)
+	    return np.where((Nq > _FLOAT_EPS)[..., np.newaxis, np.newaxis], mat, np.eye(3))
+
 	def reset(self):
-		self.state = np.array([self.np_random.uniform(low=-0.6, high=-0.4), 0])
+		print("reset")
+		#self.state = np.array([self.np_random.uniform(low=-0.6, high=-0.4), 0])
 		return np.array(self.state)
 
 	def render(self, mode='human', close=False):
