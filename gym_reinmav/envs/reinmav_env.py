@@ -78,12 +78,18 @@ class ReinmavEnv(gym.Env):
 		self.dt=1.0/100.0 #10ms
 		self.action=0
 		self.state=self.init_state
+		self.desired_state=[]
 
 		self.seed()
 		self.cum_state=self.state
 		#self.reset()
 		#print("state1=",self.state)
 		#self.quad_eq_of_motion()
+		#self.trj_gen()
+		#self.stateToQd(self.state)
+		self.trj_gen(0.012)
+		self.controller()
+
 	def seed(self, seed=None):
 		print("seed")
 		self.np_random, seed = seeding.np_random(seed)
@@ -93,11 +99,14 @@ class ReinmavEnv(gym.Env):
 		print("step")
 		self.action=action
 		start = timer()
-		state = odeint(self.quad_eq_of_motion, self.state, [0,self.dt]) #takes about 4.6795ms
-		print("ode return state=",state)
-		print("state.shape=",state.shape)
+		state = odeint(self.quad_eq_of_motion, self.state, [0,self.dt]) #takes about 1.6097ms
+		end = timer()
+		print("step odeint duration={:0.4f}ms".format((end - start)*1e3)) #in us
+
+		#print("ode return state=",state)
+		#print("state.shape=",state.shape)
 		self.state = state[-1] # We only care about the state at the ''final timestep'', self.dt
-		print("self.state.shape=",self.state.shape)
+		#print("self.state.shape=",self.state.shape)
 
 		self.cum_state = np.vstack([self.cum_state,self.state])
 		#position = self.state[0] # We only care about the state at the ''final timestep'', self.dt
@@ -109,9 +118,27 @@ class ReinmavEnv(gym.Env):
 		reward-= math.pow(action,2)*0.1
 		#self.state = np.array([position, velocity])
 		#self.state = state
-		end = timer()
-		print("step odeint duration={:0.4f}ms".format((end - start)*1e3)) #in us
+		
 		return self.state, reward, done, {}
+	def trj_gen(self,t):
+		t_max=4
+		t = np.maximum(0,np.minimum(t,t_max))
+		pos = 10*t**3 - 15*t**4 + 6*t**5;
+		vel = (30/t_max)*t**2 - (60/t_max)*t**3 + (30/t_max)*t**4;
+		acc = (60/t_max**2)*t - (180/t_max**2)*t**2 + (120/t_max**2)*t**3;
+		self.desired_state.append(pos)
+		self.desired_state.append(pos)
+		self.desired_state.append(pos)
+		self.desired_state.append(vel)
+		self.desired_state.append(vel)
+		self.desired_state.append(vel)
+		self.desired_state.append(acc)
+		self.desired_state.append(acc)
+		self.desired_state.append(acc)
+		self.desired_state.append(pos) #yaw
+		self.desired_state.append(vel) #yaw rate
+		#print("s_desired",s_desired)
+		#return s_desired
 
 	def plot_state(self):
 		print("plot_state")
@@ -132,41 +159,22 @@ class ReinmavEnv(gym.Env):
 		return [ret0, ret1]
 
 	def quad_eq_of_motion(self,state,t):
-			print("quad_eq_of_motion")
-			print("state=",state.shape)
 			"""output the derivative of the state vector"""
 			A = np.matrix([ [0.25,0, -0.5/self.arm_length],
 				[0.25,0.5/self.arm_length,0.],
 				[0.25,0,0.5/self.arm_length],
 				[0.25,-0.5/self.arm_length,0]])
-			# print("A_",A)
-			# A = A.astype(float)
-			# print("A_after",A)
-			#test=
-			#print("test=",np.asmatrix(test))
-			print("self.force=",self.force)
-			print("self.moment[:2]=",self.moment[:2])
 			a=np.hstack((self.force,self.moment[:2]))
-			print("test=",a.reshape(3,1))
-			#temp=
-			#print("temp=",temp)
 			T=A*np.asmatrix(np.hstack((self.force,self.moment[:2]))).transpose()
-			#print("T=",T)
 			T_clamped=np.maximum(np.minimum(T,self.max_force/4.0),self.min_force/4.0)
-			#print("T_clamped=",T_clamped)
 			B = np.matrix([[1.0,1.0,1.0,1.0],
 							[0.0,self.arm_length,0.0,-self.arm_length],
 							[-self.arm_length,0.0,self.arm_length,0.]])
-			#ttt=B[0,]
-			#print("B=",ttt)
 			self.force = B[[0],:]*T_clamped;
 			self.force = np.array(self.force).reshape(-1,).tolist()
-			#tt=B[[1,2],:]
-			#print("test=",B[[1,2],:]*np.asmatrix(T_clamped))
-			print("force=",self.force)
 			self.moment = np.vstack(  (B[[1,2],:]*np.asmatrix(T_clamped),  self.moment[2]));
-			print("moment=",self.moment)
 			self.moment = np.array(self.moment).reshape(-1,).tolist()
+			
 			#Assign 13 states
 			x = self.state[0]
 			y = self.state[1]
@@ -183,53 +191,24 @@ class ReinmavEnv(gym.Env):
 			r = self.state[12];
 
 			quat = np.vstack((qW,qX,qY,qZ)); #!! Attention to the order!!
-			#quat = quat.reshape(1,4)
-			#print("quat",quat)
-			#print("quat.shape=",quat.shape)
 			bRw=self.quat2mat(quat.transpose())
 			bRw=bRw.reshape(3,3) #to remove the last dimension i.e., 3,3,1
-			#print("bRw=",bRw)
 			wRb = bRw.transpose()
-
-			# bRw = QuatToRot(quat);
-			# wRb = bRw';
-			#print("wRb=",wRb)
-			#print("wRb.shape=",wRb.shape)
 			
 			# Acceleration
-			# accel = 1 / params.mass * (wRb * [0; 0; F] - [0; 0; params.mass * params.gravity]);
-			accel = 1.0 / self.mass * (wRb * np.matrix([[0],[0],self.force]) - np.matrix([[0],[0],[self.mass * self.gravity]]));
-			#print("accel1=",accel)
-			#print("accel1.shape=",accel.shape)
-			#print("accel2=",np.array(accel))
-			#print("accel2.shape=",np.array(accel).shape)
-			
+			accel = 1.0 / self.mass * (wRb * np.matrix([[0],[0],self.force]) - np.matrix([[0],[0],[self.mass * self.gravity]]))
 			accel = np.array(accel).reshape(-1,).tolist()
-			#print("accel=",accel)
 			# Angular velocity
 			K_quat = 2.0; #%this enforces the magnitude 1 constraint for the quaternion
 			quaterror = 1 - (qW**2 + qX**2 + qY**2 + qZ**2);
 			qdot = -1/2*np.matrix([ [0,-p,-q,-r],[p,0,-r,q],[q,r,0,-p],[r,-q,p,0]])*quat + K_quat*quaterror * quat
 			qdot = np.array(qdot).reshape(-1,).tolist()
-			#print("qdot=",qdot)
-			# qdot = -1/2*[0, -p, -q, -r;...
-			#      p,  0, -r,  q;...
-			#      q,  r,  0, -p;...
-			#      r, -q,  p,  0] * quat + K_quat*quaterror * quat;
-
 			# % Angular acceleration
 			omega = [p,q,r] #np.vstack((p,q,r))
-			#omega=omega.reshape(3,)
-			#print("omega=",omega)
-			#print("omega.shape=",omega.shape)
-			#print("cross=",np.cross(np.asarray(omega), np.asarray(self.Inertia*omega)))
-			a_temp=np.array(omega).reshape(-1,).tolist() 
-			b_temp=np.array(self.Inertia*np.asmatrix(omega).reshape(3,1)).reshape(-1,).tolist() 
-			#print("cross=",np.cross(omega,b_temp))
-			c_temp=np.matrix(np.cross(omega,b_temp)).reshape(3,1)
-			pqrdot   = self.invInertia * (self.moment - c_temp);
+			a_temp =np.array(self.Inertia*np.asmatrix(omega).reshape(3,1)).reshape(-1,).tolist() 
+			b_temp =np.matrix(np.cross(omega,a_temp)).reshape(3,1)
+			pqrdot = self.invInertia * (self.moment - b_temp);
 			pqrdot = np.array(pqrdot).reshape(-1,).tolist()
-			#print("pqrdot=",pqrdot)
 			sdot=[]
 			sdot.append(xdot)
 			sdot.append(ydot)
@@ -244,11 +223,11 @@ class ReinmavEnv(gym.Env):
 			sdot.append(pqrdot[0])
 			sdot.append(pqrdot[1])
 			sdot.append(pqrdot[2])
-			print("sdot=",sdot)
 			return sdot
-	#steal from rotations.py
+			
+	#stealed from rotations.py
 	def quat2mat(self,quat):
-	    """ Convert Quaternion to Euler Angles.  See rotation.py for notes """
+	    """ Convert Quaternion to Rotation matrix.  See rotation.py for notes """
 	    quat = np.asarray(quat, dtype=np.float64)
 	    assert quat.shape[-1] == 4, "Invalid shape quat {}".format(quat)
 
@@ -271,6 +250,94 @@ class ReinmavEnv(gym.Env):
 	    mat[..., 2, 1] = yZ + wX
 	    mat[..., 2, 2] = 1.0 - (xX + yY)
 	    return np.where((Nq > _FLOAT_EPS)[..., np.newaxis, np.newaxis], mat, np.eye(3))
+	def stateToQd(self,s):
+		# return is 1x12
+		# This function converts the quaternion to ZXY euler angle, no more or less
+		qd=[]
+		for i in range(6): qd.append(s[i]) #pos,vel
+		quat = np.vstack((s[6],s[7],s[8],s[9])); #!! Attention to the order!!, w,x,y,z
+		R=self.quat2mat(quat.transpose())
+		phi, theta, yaw = self.RotToRPY(R)
+		qd.append(phi)
+		qd.append(theta)
+		qd.append(yaw)
+		for i in range(3): qd.append(s[10+i]) #omega
+#		qd.append(s[10:13])
+		#print("qd=",qd)
+		return qd
+	def controller(self):
+		state=np.asmatrix(self.stateToQd(self.state)) #1x12 vector, x,y,z,dx,dy,dz,phi,theta,yaw,p,q,r
+		desired_state=np.asmatrix(self.desired_state) #1x11 vector, x,y,z,dz,dy,dz,ddx,ddy,ddz,yaw,dyaw
+		print("desired_state=",desired_state)
+		print("desired_state.shape=",desired_state.shape)
+		print("state=",state)
+		print("state.shape=",state.shape)
+		print("state[0:2]=",state[[0],[0,1,2]])
+		error_p=desired_state[[0],[0,1,2]]-state[[0],[0,1,2]]
+		print("error_p",error_p)
+		error_v=desired_state[[0],[3,4,5]]-state[[0],[3,4,5]]
+		#error_p=desired_state(0:2)-state[0:2]
+
+		#error_p=np.matrix(self.desired_state[0:2]) - np.matrix(self.state[0:2]) #x,y,z, position
+		#error_v=np.matrix(self.desired_state[3:5]) - np.matrix(self.state[3:5]) #dx,dy,dz, velocity
+		#print ("error_p",error_p)
+		#print ("error_v",error_v)
+		kp=np.array([10,10,35]);
+		kd=np.array([5,5,22]);
+		kp_rot=np.array([100,100,100]);
+		kd_rot=np.array([.1,.1,.1]);
+		# m=params.mass;
+		# g=params.gravity;
+		psi_des=desired_state[[0],[9]] #desired yaw
+		phi=state[[0],[6]]
+		theta=state[[0],[7]]
+		psi=state[[0],[8]]
+		p=state[[0],[9]]
+		q=state[[0],[10]]
+		r=state[[0],[11]]
+
+		# #Lecture week3, Control 0002.pdf 3D quadrotor.
+		dpsi_des=desired_state[[0],[10]]
+		ddr=desired_state[[0],[6,7,8]].transpose()+np.diag(kd)*error_v.transpose()+np.diag(kp)*error_p.transpose()
+		print("ddr=",ddr)
+		# ddr=des_state.acc+diag(kd)*err_v+diag(kp)*err_p;
+		u1=self.mass*(self.gravity+ddr[2])
+
+		phi_des=1/self.gravity*(ddr[0]*math.sin(psi_des)-ddr[1]*math.cos(psi_des))
+		theta_des=1/self.gravity*(ddr[0]*math.cos(psi_des)+ddr[1]*math.sin(psi_des))
+		print("psi_des=",psi_des)
+		print("psi=",psi)
+		print("dpsi_des=",dpsi_des)
+		print("r=",r)
+		mx=kp_rot[0]*(phi_des-phi)-kd_rot[0]*p
+		#mx=np.squeeze(mx.reshape(-1))
+		#print("mxxx=",np.asarray(mx))
+
+		#print("mx.shape=",mx.shape)
+		#print("mx.type=",type(mx))
+		my=(kp_rot[1]*(theta_des-theta)-kd_rot[1]*q)
+		mz=(kp_rot[2]*(psi_des-psi)+kd_rot[2]*(dpsi_des-r))
+		# Moment
+		moment= np.concatenate((mx,my,mz))
+		#self.moment=self.moment.reshape()
+		#print("u2=",u2)
+		# # Thrust
+		self.force = np.array(u1).reshape(-1,).tolist()
+		#M = u2;
+		print("force=",self.force)
+		print("moment=",moment)
+		self.moment=[moment[0,0],moment[1,0],moment[2,0]]
+
+
+
+	def RotToRPY(self,R):
+		#print("R=",R)
+		#print("R.shape=",R.shape)
+		R=R.reshape(3,3) #to remove the last dimension i.e., 3,3,1
+		phi = math.asin(R[1,2])
+		psi = math.atan2(-R[1,0]/math.cos(phi),R[1,1]/math.cos(phi))
+		theta = math.atan2(-R[0,2]/math.cos(phi),R[2,2]/math.cos(phi))
+		return phi,theta,psi
 
 	def reset(self):
 		print("reset")
