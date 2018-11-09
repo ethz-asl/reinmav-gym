@@ -54,7 +54,9 @@ class ReinmavEnv(gym.Env):
 		# self.observation_space = spaces.Box(low=self.low_state, high=self.high_state, dtype=np.float32)
 
 		self.t=0.0
-		self.dt=1.0/5000 #10ms
+		self.dt=1/100 #1.0/5000 #10ms
+		#self.dt=1.0/5000 #10ms
+		
 		# self.action=0
 		#self.init_state=[0.01, 0.01, 0.01, 0.05, 0.05, 0.05, 0.8, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] #init value for [x, y, z, dx, dy, dz, qw, qx, qy, qz, p, q, r]
 		self.init_state=[0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] #init value for [x, y, z, dx, dy, dz, qw, qx, qy, qz, p, q, r]
@@ -69,13 +71,22 @@ class ReinmavEnv(gym.Env):
 		print("seed")
 		self.np_random, seed = seeding.np_random(seed)
 		return [seed]
-
+	def myODE(self):
+		ds=1/5000
+		timeint = np.arange(self.t, self.t+self.dt,ds)
+		for t in timeint:
+			s_t=timer()
+			xdot = self.quad_eq_of_motion1(self.state,t)
+			e_t=timer()
+			#print("dura={}ms".format((e_t-s_t)*1e3))
+			self.state = self.state+ds*xdot
 	def step(self):
 		start_t=timer()
 		#Simple Euler integration, note that chooseing dt is important due to linearizing the nonlinearity of EOM. 1/1000 and 1/100 didn't work (i.e., numerical unstable by generating NaNs) but 1/10000 looks good.
-		xdot = self.quad_eq_of_motion1(self.state,self.t)
-		self.state = self.state+self.dt*xdot
-		
+		#xdot = self.quad_eq_of_motion1(self.state,self.t)
+		#self.state = self.state+self.dt*xdot
+		self.myODE()
+		end_t = timer()
 		#I can't control the behaviors of odeint (e.g., step-size) and it seems I didn't fully understand how this work under the hood.. so change odeint to a simple Euler integration by sacrificing accuracy...
 
 		#state = odeint(self.quad_eq_of_motion1, self.state, [self.t,self.t+self.dt])#,atol=1.0e-5, rtol=1.0e-5) #takes about 1.6097ms
@@ -90,7 +101,7 @@ class ReinmavEnv(gym.Env):
 
 		#Update time
 		self.t = self.t+self.dt
-		end_t = timer()
+		
 		#Store time, state, and desired for plot
 		self.cum_desired_state = np.vstack([self.cum_desired_state,desired_state])
 		self.cum_state = np.vstack([self.cum_state,self.stateToQd(self.state)])
@@ -109,7 +120,7 @@ class ReinmavEnv(gym.Env):
 		return [pos,pos,pos,vel,vel,vel,acc,acc,acc,pos,vel]
 
 	def plot_state(self):
-		plt.figure(1)
+		fig1=plt.figure(1)
 		print("plot_state")
 		#t=np.arange(0.0,len(self.cum_state)*self.dt,self.dt)
 		plt.plot(self.cum_t, self.cum_state[:,0],'b',self.cum_t, self.cum_desired_state[:,0],'r-.')
@@ -118,22 +129,28 @@ class ReinmavEnv(gym.Env):
 		plt.xlabel("Time(s)")
 		plt.ylabel("m")
 		plt.legend(["position x","desired x"])
+		plt.grid(True)
+		fig1.savefig("position_plot.pdf",format='pdf')
 
-		plt.figure(2)
+		fig2=plt.figure(2)
 		plt.plot(self.cum_t, self.cum_state[:,3],'b',self.cum_t, self.cum_desired_state[:,3],'r-.')
 		#plt.plot(self.cum_t, self.cum_desired_state[:,0])
 		plt.title("title")
 		plt.xlabel("Time(s)")
 		plt.ylabel("m/s")
 		plt.legend(["velocity x","desired vel x"])
+		plt.grid(True)
+		fig2.savefig("velocity_plot.pdf",format='pdf')
 
-		plt.figure(3)
+		fig3=plt.figure(3)
 		plt.plot(self.cum_t, self.cum_state[:,8],'b',self.cum_t, self.cum_desired_state[:,9],'r-.')
 		#plt.plot(self.cum_t, self.cum_desired_state[:,0])
 		plt.title("title")
 		plt.xlabel("Time(s)")
 		plt.ylabel("rad")
 		plt.legend(["yaw x","desired yaw"])
+		plt.grid(True)
+		fig3.savefig("yaw_plot.pdf",format='pdf')
 		plt.show()
 
 	def quad_eq_of_motion1(self,state,time):
