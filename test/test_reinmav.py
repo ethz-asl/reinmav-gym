@@ -28,10 +28,13 @@ class Environments(unittest.TestCase):
 	def test_env(self):
 		env = gym.make('reinmav-v0')
 		#env.reset()
-		for _ in range(100):
+		#for i, _ in enumerate(dict_of_list[key]):
+		for i,_ in enumerate(range(25000)):
 		# 	#env.render()
+			#print("============step {}============".format(i))
+			#print("step=",i)
 		 	#env.step(env.action_space.sample()) # take a random action
-		 	env.step() # take a random action
+			env.step() # take a random action
 		env.plot_state()
 if __name__ == "__main__":
 	env=Environments()
