@@ -72,7 +72,7 @@ class ReinmavEnv(gym.Env):
 		self.np_random, seed = seeding.np_random(seed)
 		return [seed]
 	def myODE(self):
-		ds=1/5000
+		ds=1/3000
 		timeint = np.arange(self.t, self.t+self.dt,ds)
 		for t in timeint:
 			s_t=timer()
