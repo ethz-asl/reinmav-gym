@@ -108,14 +108,18 @@ class ReinmavEnv(gym.Env):
 		self.tracking_error = 0.2 #in meter
 
 		# x,y,z,dx,dy,dz,phi,theta,psi limits
-		limit_state_rpy=np.array([10,10,10,5,5,5,0.7854,0.7854,0.7854*2,0.8726,0.8726,0.5236])
+		#limit_state_rpy=np.array([10,10,10,5,5,5,0.7854,0.7854,0.7854*2,0.8726,0.8726,0.5236])
+		limit_state_rpy=np.array([1,1,1,0.5,0.5,0.5,0.7854,0.7854,0.7854*2,0.8726,0.8726,0.5236])
+		
 		self.limit_state_quat=self.QdToState(limit_state_rpy)
 		#self.limit_state = np.array([10,10,10,5,5,5,0.7854,0.7854,0.7854*2,0.8726,0.8726,0.5236])
 
 		# force, mx, my,mz
-		self.limit_action = np.array([2.0,3*1e-5,3*1e-5,6*1e-7]) #Obtained from MATLAB simulation with additional small margins
+		self.min_action = np.array([0.0,-3*1e-5,-3*1e-5,-6*1e-7]) #Obtained from MATLAB simulation with additional small margins
+		self.max_action = np.array([2.0,3*1e-5,3*1e-5,6*1e-7]) #Obtained from MATLAB simulation with additional small margins
 
-		self.action_space = spaces.Box(low=-self.limit_action,high=self.limit_action,dtype=np.float32)
+
+		self.action_space = spaces.Box(low=self.min_action,high=self.max_action,dtype=np.float32)
 		self.observation_space = spaces.Box(low=-self.limit_state_quat,high=self.limit_state_quat,dtype=np.float32)
 		self.seed()
 
@@ -127,6 +131,7 @@ class ReinmavEnv(gym.Env):
 			xdot = self.quad_eq_of_motion1(self.state,action,t) #xdot is 1x13 (quaternion form)
 			e_t=timer()
 			#print("dura={}ms".format((e_t-s_t)*1e3))
+			#print("self.state=",self.state)
 			self.state = self.state+ds*xdot
 
 	def step(self,action):
@@ -138,29 +143,42 @@ class ReinmavEnv(gym.Env):
 		#Simple Euler integration, note that chooseing dt is important due to linearizing the nonlinearity of EOM. 1/1000 and 1/100 didn't work (i.e., numerical unstable by generating NaNs) but 1/10000 looks good.
 		#xdot = self.quad_eq_of_motion1(self.state,self.t)
 		#self.state = self.state+self.dt*xdot
-		self.myODE(action)
+		desired_state=self.trj_gen(self.t)
+		trj_err = self.calc_trj_err(self.state, desired_state)
+		self.myODE(action) #!!!! In this function, we update self.state by integrating (i.e., self.state is the next state). 
 		end_t = timer()
 		#I can't control the behaviors of odeint (e.g., step-size) and it seems I didn't fully understand how this work under the hood.. so change odeint to a simple Euler integration by sacrificing accuracy...
 
 		#state = odeint(self.quad_eq_of_motion1, self.state, [self.t,self.t+self.dt])#,atol=1.0e-5, rtol=1.0e-5) #takes about 1.6097ms
 
-		desired_state=self.trj_gen(self.t+self.dt)
-		done = True #bool(self.state[0] >= self.goal_position)
-		reward = 0
-		if done:
-			reward = 100.0
+		#desired_state=self.trj_gen(self.t+self.dt)
+		#done = True #bool(self.state[0] >= self.goal_position)
+		#reward = 0
+		#if done:
+		#	reward = 100.0
 		#reward-= math.pow(action,2)*0.1
-		reward-= 10.0
+		#reward-= 10.0
+
+		#episode terminal condition
+		#print("trj_err=",trj_err)
+		done =  trj_err > self.tracking_error
+		done = bool(done)
+
+		if not done:
+			reward = 1.0
+		else:
+			reward = 0.0
+		
 
 		#Update time
 		self.t = self.t+self.dt
-		
 		#Store time, state, and desired for plot
-		self.cum_desired_state = np.vstack([self.cum_desired_state,desired_state])
-		self.cum_state = np.vstack([self.cum_state,self.stateToQd(self.state)])
-		self.cum_t.append(self.t)
+		#self.cum_desired_state = np.vstack([self.cum_desired_state,desired_state])
+		#self.cum_state = np.vstack([self.cum_state,self.stateToQd(self.state)])
+		#self.cum_t.append(self.t)
 		#print("step duration= {}ms".format((end_t-start_t)*1e3)) #average 1.2ms
-		return self.state, reward, done, {}
+		#return self.state, reward, done, {}
+		return np.array(self.state), reward, done, {}
 
 	def trj_gen(self,t):
 		t_max=4.0
@@ -211,6 +229,7 @@ class ReinmavEnv(gym.Env):
 		cur_state=self.stateToQd(state)
 		desired_state=self.trj_gen(time)
 		#F,M=self.controller(time,cur_state,desired_state)
+		#print("action in quad_eq_of_motion1=",action)
 		F=action[0]
 		M=action[1:4]
 		#print("F=",F)
@@ -224,6 +243,16 @@ class ReinmavEnv(gym.Env):
 		# print("M=",M)
 		# print("sdot=",sdot)
 		return sdot
+
+	def calc_trj_err(self,state,desired):
+		state=np.asmatrix(state) #1x12 vector, x,y,z,dx,dy,dz,phi,theta,yaw,p,q,r
+		desired_state=np.asmatrix(desired) #1x11 vector, x,y,z,dz,dy,dz,ddx,ddy,ddz,yaw,dyaw
+		error_p=desired_state[[0],[0,1,2]]-state[[0],[0,1,2]]
+		#print("error_p=",error_p)
+		#print("errorp",error_p[[0],[0]])
+		ret=math.sqrt(error_p[[0],[0]]**2+error_p[[0],[1]]**2+error_p[[0],[2]]**2)
+		#print("ret=",ret)
+		return ret
 
 	def quad_eq_of_motion2(self,state,time,force,moment):
 			"""output the derivative of the state vector"""
@@ -432,7 +461,7 @@ class ReinmavEnv(gym.Env):
 		return R
 
 	def reset(self):
-		print("reset called")
+		#print("reset called")
 		self.state = self.np_random.uniform(low=-self.limit_state_quat,high=self.limit_state_quat, size=(13,)) #12 state, Qd format
 		#state_quad=self.QdToState(state)
 		return np.array(self.state)

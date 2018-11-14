@@ -39,9 +39,9 @@ from keras.optimizers import Adam
 class Reinforce(object):
     def init_params(self):
         #Hyperparameter definition
-        self.total_tr_epi = 1000
+        self.total_tr_epi = 100000
         self.total_test_epi=10000
-        self.max_steps_tr=500
+        self.max_steps_tr=10000
         self.max_steps_test=10000
         self.batch_size=32
         
@@ -56,7 +56,7 @@ class Reinforce(object):
         self.min_epsilon = 0.01
         self.epsilon_decay= 0.995 
         self.dr=1e-2 #decay rate
-        self.save_model=True
+        self.save_model=False
 
         # Angle at which to fail the episode
         self.num_actions = self.env.action_space.shape[0]
@@ -65,6 +65,9 @@ class Reinforce(object):
         self.num_state = self.env.observation_space.shape[0]
         print("self.num_state=",self.num_state)
         self.memory = deque(maxlen=1000)
+        #self.init_state=[0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] #init value for [x, y, z, dx, dy, dz, qw, qx, qy, qz, p, q, r]
+		#self.state=self.init_state
+
 
     def __init__(self):
         self.env = gym.make('reinmav-v0') #e.g. "Taxi-v2", "CartPole-v0"
@@ -94,12 +97,14 @@ class Reinforce(object):
         cnt=0
         for state,action,reward,done,next_state in miniBatch:
             if done:
-                y=reward
+                y=action#reward
             else:
                 y_pred=self.model.predict(next_state)[0]
                 y= reward + self.gamma * np.amax(y_pred)
             y_f = self.model.predict(state)
-            y_f[0][action] = y
+            #print("action=",action)
+            #print("y_f=",y_f)
+            #y_f[0][action] = y
             y_stack[cnt,:]=np.reshape(y_f,[1,self.num_actions])
             x_stack[cnt,:]=np.reshape(state,[1,self.num_state])
             cnt+=1
@@ -127,7 +132,7 @@ class Reinforce(object):
             for step in range(self.max_steps_tr):
                 #To choose action
                 action = self.get_action(state)
-                #print("action=",action)
+                #print("action in mav_ctrl=",action)
                 #Once action selected, iterating
                 next_state,reward,done,_ = self.env.step(action)
                 reward = reward if not done else -10
@@ -161,14 +166,16 @@ class Reinforce(object):
         return max(self.min_lr, min(0.5, 1.0 - math.log10((t+1)/25)))
     
     def get_action(self,state):
+        #print("get_action called")
         # Select a random action in case of exploration
         if random.random() < self.epsilon:
             action = self.env.action_space.sample()
         else:
         # using the trained model to predict best action (exploitation)
             predic_reward = self.model.predict(state)
-            action = np.argmax(predic_reward[0])
-        return action
+            #action = np.argmax(predic_reward[0])
+            action = predic_reward#np.reshape(predic_reward,[1,self.num_actions])
+        return np.squeeze(action)
 
     def test(self):
         #For testing
