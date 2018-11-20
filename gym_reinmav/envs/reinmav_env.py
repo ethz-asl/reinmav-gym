@@ -107,16 +107,17 @@ class ReinmavEnv(gym.Env):
 		# criteria at which to fail the episode
 		self.tracking_error = 0.2 #in meter
 
-		# x,y,z,dx,dy,dz,phi,theta,psi limits
+		# x,y,z,dx,dy,dz,phi,theta,psi,p,q,r limits
 		#limit_state_rpy=np.array([10,10,10,5,5,5,0.7854,0.7854,0.7854*2,0.8726,0.8726,0.5236])
-		limit_state_rpy=np.array([1,1,1,0.5,0.5,0.5,0.7854,0.7854,0.7854*2,0.8726,0.8726,0.5236])
+		#limit_state_rpy=np.array([1,1,1,0.5,0.5,0.5,0.7854,0.7854,0.7854*2,0.8726,0.8726,0.5236])
+		limit_state_rpy=np.array([1,1,1,0.5,0.5,0.5,0.7854/2,0.7854/2,0.7854*2/2,0.8726/2,0.8726/2,0.5236/2])
 		
 		self.limit_state_quat=self.QdToState(limit_state_rpy)
 		#self.limit_state = np.array([10,10,10,5,5,5,0.7854,0.7854,0.7854*2,0.8726,0.8726,0.5236])
 
 		# force, mx, my,mz
-		self.min_action = np.array([0.0,-3*1e-5,-3*1e-5,-6*1e-7]) #Obtained from MATLAB simulation with additional small margins
-		self.max_action = np.array([2.0,3*1e-5,3*1e-5,6*1e-7]) #Obtained from MATLAB simulation with additional small margins
+		self.min_action = np.array([0.0,-3*1e-5/2,-3*1e-5/2,-6*1e-7/2]) #Obtained from MATLAB simulation with additional small margins
+		self.max_action = np.array([1.7,3*1e-5/2,3*1e-5/2,6*1e-7/2]) #Obtained from MATLAB simulation with additional small margins
 
 
 		self.action_space = spaces.Box(low=self.min_action,high=self.max_action,dtype=np.float32)

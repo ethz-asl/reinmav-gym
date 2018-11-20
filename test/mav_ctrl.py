@@ -140,15 +140,16 @@ class Reinforce(object):
                 next_state=np.reshape(next_state,[1,self.num_state])
                 self.history(state,action,reward,done,next_state)
                 state=next_state
-                if done:
-                    print("episode: {}/{}, score: {}".format(episode, self.total_tr_epi, step))
+                if done: #in case an episode finished with trj_err > self.tracking_error
+                    #print("episode: {}/{}, score: {}".format(episode, self.total_tr_epi, step))
                     break
                 if len(self.memory) > self.batch_size:
                     self.train_with_history()
-            if episode%1000==0:
-                print("Current episode=",episode)
+            
             scores.append(tick_cnt)
             mean_score = np.mean(scores)
+            if episode%1000==0:
+                print("Current episode={} and mean score = {}".format(episode,mean_score))
             if episode % self.max_steps_tr == 0:
                 print('[Episode {}] - Mean survival time over last {} episodes was {} ticks.'.format(episode, self.max_steps_tr,mean_score))
             scores.clear()
