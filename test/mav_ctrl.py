@@ -91,7 +91,7 @@ class Reinforce(object):
 
     def train_with_history(self):
         #print("self.memory.cout=",self.memory.count)
-        miniBatch = random.sample(self.memory,self.batch_size)
+        miniBatch = random.sample(list(self.memory),self.batch_size)
         y_stack=np.zeros((self.batch_size,self.num_actions))
         x_stack=np.zeros((self.batch_size,self.num_state))
         cnt=0
