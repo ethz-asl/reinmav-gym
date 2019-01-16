@@ -120,6 +120,8 @@ class ReinmavEnv(gym.Env):
 		return [pos,pos,pos,vel,vel,vel,acc,acc,acc,pos,vel]
 
 	def plot_state(self):
+		from mpl_toolkits.mplot3d import axes3d, Axes3D
+
 		fig1=plt.figure(1)
 		print("plot_state")
 		#t=np.arange(0.0,len(self.cum_state)*self.dt,self.dt)
@@ -151,7 +153,21 @@ class ReinmavEnv(gym.Env):
 		plt.legend(["yaw x","desired yaw"])
 		plt.grid(True)
 		fig3.savefig("yaw_plot.pdf",format='pdf')
+
+		fig1=plt.figure(4)
+		ax = Axes3D(fig1)
+		print("plot_state")
+		#t=np.arange(0.0,len(self.cum_state)*self.dt,self.dt)
+		plt.plot(self.cum_t, self.cum_state[:,0],'b',self.cum_t, self.cum_desired_state[:,0],'r-.')
+		#plt.plot(self.cum_t, self.cum_desired_state[:,0])
+		plt.title("title")
+		plt.xlabel("Time(s)")
+		plt.ylabel("m")
+		plt.legend(["position x","desired x"])
+		plt.grid(True)
+		fig1.savefig("3dposition_plot.pdf",format='pdf')
 		plt.show()
+
 
 	def quad_eq_of_motion1(self,state,time):
 		cur_state=self.stateToQd(state)
