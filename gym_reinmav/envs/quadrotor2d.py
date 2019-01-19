@@ -37,6 +37,7 @@ class Quadrotor2D(gym.Env):
 
 		self.viewer = None
 		self.quadtrans = None
+		self.reftrans = None
 		self.x_range = 1.0
 
 
@@ -78,24 +79,38 @@ class Quadrotor2D(gym.Env):
 
 		world_width = self.x_range*2
 		scale = screen_width/world_width
-		quadwidth = 50.0
+		quadwidth = 80.0
 		quadheight = 10.0
+		ref_size = 5.0
 
 		if self.viewer is None:
 			from gym.envs.classic_control import rendering
 			self.viewer = rendering.Viewer(screen_width, screen_height)
+			# Draw drone
 			l,r,t,b = -quadwidth/2, quadwidth/2, quadheight/2, -quadheight/2
 			quad = rendering.FilledPolygon([(l,b), (l,t), (r,t), (r,b)])
 			self.quadtrans = rendering.Transform()
 			quad.add_attr(self.quadtrans)
 			self.viewer.add_geom(quad)
+			# Draw refereence
+			ref = rendering.make_circle(ref_size)
+			self.reftrans = rendering.Transform()
+			ref.add_attr(self.reftrans)
+			ref.set_color(1,0,0)
+			self.viewer.add_geom(ref)
 
 		if self.pos is None: return None
+
 		x = self.pos
 		theta = self.att
 		quad_x = x[0]*scale+screen_width/2.0 # MIDDLE OF CART
 		quad_y = x[1]*scale+screen_height/2.0 # MIDDLE OF CART
 		self.quadtrans.set_translation(quad_x, quad_y)
 		self.quadtrans.set_rotation(theta)
+
+		y = self.ref_pos
+		ref_x = y[0]*scale+screen_width/2.0
+		ref_y = y[1]*scale+screen_height/2.0
+		self.reftrans.set_translation(ref_x, ref_y)
 
 		return self.viewer.render(return_rgb_array = mode=='rgb_array')
