@@ -36,7 +36,7 @@ class Environments(unittest.TestCase):
 			#print("step=",i)
 		 	#env.step(env.action_space.sample()) # take a random action
 		 	# action = env.control(reference)
-		    action = [1.0, 1.0]
+		    action = [10.0, 1.0]
 		    env.step(action) # take a random action
 		    env.render() # take a random action
 		end_t=timer()
