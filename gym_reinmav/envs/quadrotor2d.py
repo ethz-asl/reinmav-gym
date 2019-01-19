@@ -17,8 +17,9 @@
 
 import gym
 from gym import error, spaces, utils
-from math import cos, sin, pi
+from math import cos, sin, pi, atan2
 import numpy as np
+from numpy import linalg
 
 class Quadrotor2D(gym.Env):
 	metadata = {'render.modes': ['human']}
@@ -28,8 +29,11 @@ class Quadrotor2D(gym.Env):
 		self.g = np.array([0.0, -9.8])
 
 		self.att = np.array([0.0])
-		self.pos = np.array([0.0, 0.0])
-		self.vel = np.array([0.0, 0.0])
+		self.pos = np.array([0.3, 0.0])
+		self.vel = np.array([3.0, 0.0])
+
+		self.ref_pos = np.array([0.0, 0.0])
+		self.ref_vel = np.array([0.0, 0.0])
 
 		self.viewer = None
 		self.quadtrans = None
@@ -44,6 +48,24 @@ class Quadrotor2D(gym.Env):
 		self.vel = self.vel + acc * self.dt
 		self.pos = self.pos + self.vel * self.dt + 0.5*acc*self.dt*self.dt
 		self.att = self.att + w * self.dt
+
+	def control(self):
+		Kp = -5.0
+		Kv = -4.0
+		tau = 0.1;
+
+		error_pos = self.pos - self.ref_pos
+		error_vel = self.vel - self.ref_vel
+		# %% Calculate desired acceleration
+		desired_acc = Kp * error_pos + Kv * error_vel + [0.0, 9.8];
+		desired_att = atan2(desired_acc[1], desired_acc[0]) - pi/2;
+		error_att = self.att - desired_att;
+		w = (-1/tau) * error_att;
+		thrust = self.mass * linalg.norm(desired_acc, 2);
+
+		action = np.array([thrust, w])
+
+		return action 
 
 	def reset(self):
 		print("reset")
