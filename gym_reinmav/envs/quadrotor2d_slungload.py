@@ -1,5 +1,5 @@
 #Copyright (C) 2018, by Jaeyoung Lim, jaeyoung@auterion.com
-# 2D quadrotor environment using rate control inputs (continuous control)
+# 2D quadrotor slungload system environment using rate control inputs (continuous control)
 
 #This is free software: you can redistribute it and/or modify
 #it under the terms of the GNU Lesser General Public License as published by
@@ -25,21 +25,25 @@ class Quadrotor2DSlungload(gym.Env):
 	metadata = {'render.modes': ['human']}
 	def __init__(self):
 		self.mass = 1.0
+		self.load_mass = 0.1;
 		self.dt = 0.01
 		self.g = np.array([0.0, -9.8])
 
 		self.att = np.array([0.0])
 		self.pos = np.array([0.3, 0.0])
-		self.vel = np.array([3.0, 0.0])
+		self.vel = np.array([1.0, 0.0])
 		self.load_pos = np.array([0.3, 0.0])
 		self.load_vel = np.array([3.0, 0.0])
-		self.slack = 0.0
+		self.slack = True
 
 		self.ref_pos = np.array([0.0, 0.0])
 		self.ref_vel = np.array([0.0, 0.0])
 
+		self.tether_length = 0.5
+
 		self.viewer = None
 		self.quadtrans = None
+		self.loadtrans = None
 		self.reftrans = None
 		self.x_range = 1.0
 
@@ -47,11 +51,47 @@ class Quadrotor2DSlungload(gym.Env):
 	def step(self, action):
 		thrust = action[0] # Thrust command
 		w = action[1] # Angular velocity command
-		# acc = thrust/self.mass * np.array([cos(self.att + pi()/2), sin(self.att + pi()/2)]) + self.g
-		acc = thrust/self.mass * np.array([cos(self.att + pi/2), sin(self.att + pi/2)]) + self.g
-		self.vel = self.vel + acc * self.dt
-		self.pos = self.pos + self.vel * self.dt + 0.5*acc*self.dt*self.dt
-		self.att = self.att + w * self.dt
+
+		tether_vec = self.load_pos - self.pos;
+		unit_tether_vec = tether_vec / linalg.norm(tether_vec)
+
+		if linalg.norm(tether_vec) >= self.tether_length :
+			thrust_vec = thrust*np.array([cos(self.att+ pi/2), sin(self.att + pi/2)])
+			load_acceleration = np.inner(unit_tether_vec, thrust_vec - self.mass * self.tether_length * np.inner(self.load_vel, self.load_vel)) * unit_tether_vec
+			load_acceleration = (1/(self.mass + self.load_mass)) * load_acceleration + self.g
+			self.load_vel = self.load_vel + load_acceleration * self.dt
+			self.load_pos = self.load_pos + self.load_vel * self.dt + 0.5 * load_acceleration * self.dt * self.dt
+
+			T = self.load_mass * linalg.norm(-self.g + load_acceleration) * unit_tether_vec
+
+			slack = False;
+
+			# Quadrotor dynamics
+			acc = thrust/self.mass  * np.array([cos(self.att + pi/2), sin(self.att + pi/2)]) + self.g + T/self.mass
+			self.vel = self.vel + acc * self.dt
+			self.pos = self.pos + self.vel * self.dt + 0.5 * acc * self.dt * self.dt
+			self.att = self.att + w * self.dt
+
+			# Enforce kinematic constraints
+			load_direction = (self.load_pos - self.pos) / linalg.norm(self.load_pos - self.pos)
+			self.load_pos = self.pos + load_direction * self.tether_length
+			self.load_vel = self.load_vel - np.inner(self.load_vel - self.vel, load_direction) * load_direction
+
+
+		else :
+			T = np.array([0.0, 0.0])
+			self.slack = True
+
+			# Load dynamics
+			load_acceleration = self.g
+			self.load_vel = self.load_vel + load_acceleration * self.dt
+			self.load_pos = self.load_pos + self.load_vel * self.dt + 0.5 * load_acceleration * self.dt * self.dt
+
+			# Quadrotor dynamics
+			acc = thrust/self.mass * np.array([cos(self.att + pi/2), sin(self.att + pi/2)]) + self.g
+			self.vel = self.vel + acc * self.dt
+			self.pos = self.pos + self.vel * self.dt + 0.5*acc*self.dt*self.dt
+			self.att = self.att + w * self.dt
 
 	def control(self):
 		Kp = -5.0
@@ -85,6 +125,7 @@ class Quadrotor2DSlungload(gym.Env):
 		quadwidth = 80.0
 		quadheight = 10.0
 		ref_size = 5.0
+		load_size = 5.0
 
 		if self.viewer is None:
 			from gym.envs.classic_control import rendering
@@ -95,6 +136,13 @@ class Quadrotor2DSlungload(gym.Env):
 			self.quadtrans = rendering.Transform()
 			quad.add_attr(self.quadtrans)
 			self.viewer.add_geom(quad)
+			# Draw load
+			load = rendering.make_circle(load_size)
+			self.loadtrans = rendering.Transform()
+			load.add_attr(self.loadtrans)
+			load.set_color(0,0,1)
+			self.viewer.add_geom(load)
+
 			# Draw reference
 			ref = rendering.make_circle(ref_size)
 			self.reftrans = rendering.Transform()
@@ -110,6 +158,14 @@ class Quadrotor2DSlungload(gym.Env):
 		quad_y = x[1]*scale+screen_height/2.0 # MIDDLE OF CART
 		self.quadtrans.set_translation(quad_x, quad_y)
 		self.quadtrans.set_rotation(theta)
+
+		x_l = self.load_pos
+		np.set_printoptions(precision=3)
+		print(self.load_pos)
+		load_x = x_l[0]*scale+screen_width/2.0
+		load_y = x_l[1]*scale+screen_height/2.0
+		self.loadtrans.set_translation(load_x, load_y)
+
 
 		y = self.ref_pos
 		ref_x = y[0]*scale+screen_width/2.0

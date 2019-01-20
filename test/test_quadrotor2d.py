@@ -1,5 +1,5 @@
-#Copyright (C) 2018, by Inkyu Sa, enddl22@gmail.com
-# Adaptation of the MountainCar Environment (continuous control)
+#Copyright (C) 2018, by Jaeyoung Lim, jalim@student.ethz.ch
+# 2D quadrotor environment using rate control inputs  (continuous control)
 
 #This is free software: you can redistribute it and/or modify
 #it under the terms of the GNU Lesser General Public License as published by
