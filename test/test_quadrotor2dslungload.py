@@ -1,5 +1,5 @@
 #Copyright (C) 2018, by Jaeyoung Lim, jalim@student.ethz.ch
-# 2D quadrotor environment using rate control inputs  (continuous control)
+# 2D quadrotor slungload system environment using rate control inputs (continuous control)
 
 #This is free software: you can redistribute it and/or modify
 #it under the terms of the GNU Lesser General Public License as published by
@@ -26,7 +26,7 @@ from timeit import default_timer as timer
 
 class Environments(unittest.TestCase):
 	def test_env(self):
-		env = gym.make('quadrotor2d-v0')
+		env = gym.make('quadrotor2d-slungload-v0')
 		#env.reset()
 		#for i, _ in enumerate(dict_of_list[key]):
 		start_t=timer()
