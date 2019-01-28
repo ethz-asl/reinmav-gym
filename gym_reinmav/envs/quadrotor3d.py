@@ -37,7 +37,7 @@ class Quadrotor3D(gym.Env):
 
 		self.viewer = None
 		self.render_quad = None
-		self.reftrans = None
+		self.render_ref = None
 		self.x_range = 1.0
 
 
@@ -74,16 +74,20 @@ class Quadrotor3D(gym.Env):
 		return np.array(self.state)
 
 	def render(self, mode='human', close=False):
+		from vpython import box, sphere, color, vector, rate, canvas
+
 		if self.viewer is None:
-			from vpython import box, sphere, color, vector, rate, canvas
-			rate(100)
-			
-			self.render_quad = sphere (canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), radius=1, color=color.red, make_trail=False)
+			self.viewer = canvas(title='Examples of Tetrahedrons', width=640, height=480, center=vector(0.5, 0,1), background=color.white)
+			# rate(100)
+			self.render_quad = sphere(pos=vector(self.pos[0],self.pos[1],0), radius=0.02, color=color.red)
+			self.render_ref = sphere(pos=vector(0, 0, 0), radius=0.02, color=color.blue, make_trail = 0)
 
 		if self.pos is None: return None
-		
+
 		self.render_quad.pos.x = self.pos[0]
 		self.render_quad.pos.y = self.pos[1]
 		self.render_quad.pos.z = 0
-		
+
+		rate(100)
+
 		return True
