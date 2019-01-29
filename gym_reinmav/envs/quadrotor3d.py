@@ -33,7 +33,7 @@ class Quadrotor3D(gym.Env):
 		self.pos = np.array([0.3, 0.1, 1.0])
 		self.vel = np.array([3.0, 0.0, 0.0])
 
-		self.ref_pos = np.array([0.0, 0.0, 1.0])
+		self.ref_pos = np.array([0.0, 0.0, 2.0])
 		self.ref_vel = np.array([0.0, 0.0, 0.0])
 
 		self.viewer = None
@@ -116,14 +116,30 @@ class Quadrotor3D(gym.Env):
 		return np.array(self.state)
 
 	def render(self, mode='human', close=False):
-		from vpython import box, sphere, color, vector, rate, canvas, cylinder, arrow
+		from vpython import box, sphere, color, vector, rate, canvas, cylinder, arrow, curve
+
+		def make_grid(unit, n):
+			nunit = unit * n
+			for i in range(n+1):
+				if i%5==0:
+					lcolor = vector(0.5,0.5,0.5)
+				else:
+					lcolor = vector(0.5, 0.5, 0.5)
+				curve(pos=[(0,i*unit,0), (nunit, i*unit, 0)],color=lcolor)
+				curve(pos=[(i*unit,0,0), (i*unit, nunit, 0)],color=lcolor)
+				curve(pos=[(0,-i*unit,0), (-nunit, -i*unit, 0)],color=lcolor)
+				curve(pos=[(-i*unit,0,0), (-i*unit, -nunit, 0)],color=lcolor)
+				curve(pos=[(0,i*unit,0), (-nunit, -i*unit, 0)],color=lcolor)
+				curve(pos=[(i*unit,0,0), (-i*unit, -nunit, 0)],color=lcolor)				
+
+
 		current_quat = Quaternion(self.att)
 		x_axis = current_quat.rotation_matrix.dot(np.array([1.0, 0.0, 0.0]))
 		y_axis = current_quat.rotation_matrix.dot(np.array([0.0, 1.0, 0.0]))
 		z_axis = current_quat.rotation_matrix.dot(np.array([0.0, 0.0, 1.0]))
 
 		if self.viewer is None:
-			self.viewer = canvas(title='Quadrotor 3D', width=640, height=480, center=vector(0, 0, 0), forward=vector(1, 1, -1), up=vector(0, 0, 1), background=color.white)
+			self.viewer = canvas(title='Quadrotor 3D', width=640, height=480, center=vector(0, 0, 2), forward=vector(1, 1, -0.5), up=vector(0, 0, 1), background=color.white, range=4.0, autoscale = False)
 			self.render_quad1 = box(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(x_axis[0],x_axis[1],x_axis[2]), length=0.2, height=0.05, width=0.05)
 			self.render_quad2 = box(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(y_axis[0],y_axis[1],y_axis[2]), length=0.2, height=0.05, width=0.05)
 			self.render_rotor1 = cylinder(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
@@ -132,7 +148,7 @@ class Quadrotor3D(gym.Env):
 			self.render_rotor4 = cylinder(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
 			self.render_velocity = pointer = arrow(pos=vector(self.pos[0],self.pos[1],0), axis=vector(self.vel[0],self.vel[1],self.vel[2]), shaftwidth=0.05, color=color.green)
 			self.render_ref = sphere(canvas = self.viewer, pos=vector(self.ref_pos[0], self.ref_pos[1], self.ref_pos[2]), radius=0.02, color=color.blue, make_trail = True)
-
+			grid_xy = make_grid(5, 100)
 		if self.pos is None: return None
 
 		self.render_quad1.pos.x = self.pos[0]
