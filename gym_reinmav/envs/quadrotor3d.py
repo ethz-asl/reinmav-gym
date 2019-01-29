@@ -30,14 +30,16 @@ class Quadrotor3D(gym.Env):
 		self.g = np.array([0.0, 0.0, -9.8])
 
 		self.att = np.array([1.0, 0.0, 0.0, 0.0])
-		self.pos = np.array([0.3, 0.0, 1.0])
+		self.pos = np.array([0.3, 0.1, 1.0])
 		self.vel = np.array([3.0, 0.0, 0.0])
 
 		self.ref_pos = np.array([0.0, 0.0, 1.0])
 		self.ref_vel = np.array([0.0, 0.0, 0.0])
 
 		self.viewer = None
-		self.render_quad = None
+		self.render_quad1 = None
+		self.render_quad2 = None
+
 		self.render_ref = None
 		self.x_range = 1.0
 
@@ -46,16 +48,15 @@ class Quadrotor3D(gym.Env):
 		thrust = action[0] # Thrust command
 		w = action[1:4] # Angular velocity command
 		att_quaternion = Quaternion(self.att)
-		att_rotmat = att_quaternion.rotation_matrix
 
-		acc = thrust/self.mass * np.dot(att_rotmat, np.array([0.0, 0.0, 1.0])) + self.g
+		acc = thrust/self.mass * att_quaternion.rotation_matrix.dot(np.array([0.0, 0.0, 1.0])) + self.g
 		
-		self.vel = self.vel + acc * self.dt
-		self.pos = self.pos + self.vel * self.dt + 0.5*acc*self.dt*self.dt
+		vel = self.vel
+		self.vel = vel + acc * self.dt
+		self.pos = self.pos + vel * self.dt + 0.5*acc*self.dt*self.dt
 		
 		q_dot = att_quaternion.derivative(w)
-		self.att = self.att + q_dot * self.dt
-
+		self.att = self.att + q_dot.elements * self.dt
 
 	def control(self):
 		def acc2quat(desired_acc, yaw): # TODO: Yaw rotation
@@ -76,7 +77,7 @@ class Quadrotor3D(gym.Env):
 
 		Kp = np.array([-5.0, -5.0, -5.0])
 		Kv = np.array([-4.0, -4.0, -4.0])
-		tau = 0.1;
+		tau = 0.3;
 
 		error_pos = self.pos - self.ref_pos
 		error_vel = self.vel - self.ref_vel
@@ -84,18 +85,23 @@ class Quadrotor3D(gym.Env):
 		# %% Calculate desired acceleration
 		reference_acc = np.array([0.0, 0.0, 0.0])
 		feedback_acc = Kp * error_pos + Kv * error_vel 
-		desired_acc = reference_acc + feedback_acc + self.g
+
+		desired_acc = reference_acc + feedback_acc - self.g
 
 		desired_att = acc2quat(desired_acc, 0.0)
+
 		desired_quat = Quaternion(desired_att)
 		current_quat = Quaternion(self.att)
-		error_att = desired_quat / current_quat
-		qe = error_att.elements
-		
-		w = (-2/tau) * np.sign(qe[0])*qe[1:4]
-		
-		thrust = desired_acc.dot(current_quat.rotation_matrix*np.array([0.0, 0.0, 1.0]))
 
+		error_att = current_quat.conjugate * desired_quat
+		qe = error_att.elements
+
+		
+		w = (2/tau) * np.sign(qe[0])*qe[1:4]
+
+		
+		thrust = desired_acc.dot(current_quat.rotation_matrix.dot(np.array([0.0, 0.0, 1.0])))
+		
 		action = np.array([thrust, w[0], w[1], w[2]])
 
 		return action 
@@ -107,25 +113,36 @@ class Quadrotor3D(gym.Env):
 
 	def render(self, mode='human', close=False):
 		from vpython import box, sphere, color, vector, rate, canvas
+		current_quat = Quaternion(self.att)
+		x_axis = current_quat.rotation_matrix.dot(np.array([1.0, 0.0, 0.0]))
+		y_axis = current_quat.rotation_matrix.dot(np.array([0.0, 1.0, 0.0]))
+		z_axis = current_quat.rotation_matrix.dot(np.array([0.0, 0.0, 1.0]))
 
 		if self.viewer is None:
-			self.viewer = canvas(title='Quadrotor 3D', width=640, height=480, center=vector(1, 0,1), background=color.white)
-			self.render_quad = box(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(self.att[1],self.att[2],self.att[3]), length=0.2, height=0.05, width=0.05)
+			self.viewer = canvas(title='Quadrotor 3D', width=640, height=480, center=vector(0, 0, 0), forward=vector(1, 1, -1), up=vector(0, 0, 1), background=color.white)
+			self.render_quad1 = box(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(x_axis[0],x_axis[1],x_axis[2]), length=0.2, height=0.05, width=0.05)
+			self.render_quad2 = box(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(y_axis[0],y_axis[1],y_axis[2]), length=0.2, height=0.05, width=0.05)
 			self.render_ref = sphere(canvas = self.viewer, pos=vector(self.ref_pos[0], self.ref_pos[1], self.ref_pos[2]), radius=0.02, color=color.blue, make_trail = 0)
 
 		if self.pos is None: return None
 
-		self.render_quad.pos.x = self.pos[0]
-		self.render_quad.pos.y = self.pos[1]
-		self.render_quad.pos.z = self.pos[2]
-		# self.render_quad.axis.x = self.att[1]
-		# self.render_quad.axis.y = self.att[2]	
-		# self.render_quad.axis.z = self.att[3]
+		self.render_quad1.pos.x = self.pos[0]
+		self.render_quad1.pos.y = self.pos[1]
+		self.render_quad1.pos.z = self.pos[2]
+		self.render_quad2.pos.x = self.pos[0]
+		self.render_quad2.pos.y = self.pos[1]
+		self.render_quad2.pos.z = self.pos[2]
+
+		self.render_quad1.axis.x = x_axis[0]
+		self.render_quad1.axis.y = x_axis[1]	
+		self.render_quad1.axis.z = x_axis[2]
+		self.render_quad2.axis.x = y_axis[0]
+		self.render_quad2.axis.y = y_axis[1]	
+		self.render_quad2.axis.z = y_axis[2]
+
 		self.render_ref.pos.x = self.ref_pos[0]
 		self.render_ref.pos.y = self.ref_pos[1]
 		self.render_ref.pos.z = self.ref_pos[2]
-		print(self.pos[0], self.pos[1], self.pos[2])
-
 
 		rate(100)
 
