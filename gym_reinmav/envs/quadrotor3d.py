@@ -43,6 +43,7 @@ class Quadrotor3D(gym.Env):
 		self.render_rotor2 = None
 		self.render_rotor3 = None
 		self.render_rotor4 = None
+		self.render_velocity = None
 		self.render_ref = None
 		self.x_range = 1.0
 
@@ -115,7 +116,7 @@ class Quadrotor3D(gym.Env):
 		return np.array(self.state)
 
 	def render(self, mode='human', close=False):
-		from vpython import box, sphere, color, vector, rate, canvas, cylinder
+		from vpython import box, sphere, color, vector, rate, canvas, cylinder, arrow
 		current_quat = Quaternion(self.att)
 		x_axis = current_quat.rotation_matrix.dot(np.array([1.0, 0.0, 0.0]))
 		y_axis = current_quat.rotation_matrix.dot(np.array([0.0, 1.0, 0.0]))
@@ -129,6 +130,7 @@ class Quadrotor3D(gym.Env):
 			self.render_rotor2 = cylinder(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
 			self.render_rotor3 = cylinder(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
 			self.render_rotor4 = cylinder(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
+			self.render_velocity = pointer = arrow(pos=vector(self.pos[0],self.pos[1],0), axis=vector(self.vel[0],self.vel[1],self.vel[2]), shaftwidth=0.05, color=color.green)
 			self.render_ref = sphere(canvas = self.viewer, pos=vector(self.ref_pos[0], self.ref_pos[1], self.ref_pos[2]), radius=0.02, color=color.blue, make_trail = True)
 
 		if self.pos is None: return None
@@ -155,6 +157,9 @@ class Quadrotor3D(gym.Env):
 		self.render_rotor4.pos.x = self.pos[0] + rotor_pos[0]
 		self.render_rotor4.pos.y = self.pos[1] + rotor_pos[1]
 		self.render_rotor4.pos.z = self.pos[2] + rotor_pos[2]
+		self.render_velocity.pos.x = self.pos[0]
+		self.render_velocity.pos.y = self.pos[1]
+		self.render_velocity.pos.z = self.pos[2]
 
 		self.render_quad1.axis.x = x_axis[0]
 		self.render_quad1.axis.y = x_axis[1]	
@@ -174,6 +179,9 @@ class Quadrotor3D(gym.Env):
 		self.render_rotor4.axis.x = 0.01*z_axis[0]
 		self.render_rotor4.axis.y = 0.01*z_axis[1]
 		self.render_rotor4.axis.z = 0.01*z_axis[2]
+		self.render_velocity.axis.x = 0.5 * self.vel[0]
+		self.render_velocity.axis.y = 0.5 * self.vel[1]
+		self.render_velocity.axis.z = 0.5 * self.vel[2]
 
 
 		self.render_quad1.up.x = z_axis[0]
