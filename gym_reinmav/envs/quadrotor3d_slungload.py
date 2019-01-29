@@ -32,9 +32,14 @@ class Quadrotor3DSlungload(gym.Env):
 		self.att = np.array([1.0, 0.0, 0.0, 0.0])
 		self.pos = np.array([0.3, 0.1, 1.0])
 		self.vel = np.array([3.0, 0.0, 0.0])
+		self.load_pos = np.array([0.0, -0.1, 1.0])
+		self.load_vel = np.array([0.0, 0.0, 0.0])
+
 
 		self.ref_pos = np.array([0.0, 0.0, 1.0])
 		self.ref_vel = np.array([0.0, 0.0, 0.0])
+
+		self.tether_length = 0.5
 
 		self.viewer = None
 		self.render_quad1 = None
@@ -51,16 +56,54 @@ class Quadrotor3DSlungload(gym.Env):
 	def step(self, action):
 		thrust = action[0] # Thrust command
 		w = action[1:4] # Angular velocity command
-		att_quaternion = Quaternion(self.att)
 
-		acc = thrust/self.mass * att_quaternion.rotation_matrix.dot(np.array([0.0, 0.0, 1.0])) + self.g
-		
-		vel = self.vel
-		self.vel = vel + acc * self.dt
-		self.pos = self.pos + vel * self.dt + 0.5*acc*self.dt*self.dt
-		
-		q_dot = att_quaternion.derivative(w)
-		self.att = self.att + q_dot.elements * self.dt
+		tether_vec = self.load_pos = self.pos
+		unit_tether_vec = tether_vec / linalg.norm(tether_vec)
+
+		if linalg.norm(tether_vec) >= self.tether_length:
+
+			#Quadrotor Dynamics
+			att_quaternion = Quaternion(self.att)
+
+			thrust_vec = thrust*att_quatnernion.rotation_matrix.dot(np.array([0.0, 0.0, 1.0]))
+			load_acceleration = np.inner(unit_tether_vec, thrust_vec - self.mass * self.tether_length * np.inner(self.load_vel, self.load_vel)) * unit_tether_vec
+			load_acceleration = (1/(self.mass + self.load_mass)) * load_acceleration + self.g
+			self.load_vel = self.load_vel + load_acceleration * self.dt
+			self.load_pos = self.load_pos + self.load_vel * self.dt + 0.5 * load_acceleration * self.dt * self.dt
+
+			T = self.load_mass * linalg.norm(-self.g + load_acceleration) * unit_tether_vec
+
+			#Quadrotor Dynamics
+			acc = thrust/self.mass * att_quaternion.rotation_matrix.dot(np.array([0.0, 0.0, 1.0])) + self.g + T/self.mass
+			vel = self.vel
+			self.vel = vel + acc * self.dt
+			self.pos = self.pos + vel * self.dt + 0.5*acc*self.dt*self.dt
+			
+			q_dot = att_quaternion.derivative(w)
+			self.att = self.att + q_dot.elements * self.dt
+
+			## Enforce kinematic constraints
+			load_direction = (self.load_pos - self.pos) / linalg.norm(self.load_pos - self.pos)
+			self.load_pos = self.pos + load_direction * self.tether_length
+			self.load_vel = self.load_vel - np.inner(self.load_vel - self.vel, load_direction) * load_direction
+
+
+		else:
+			att_quaternion = Quaternion(self.att)
+
+			# Load dynamics
+			load_acceleration = self.g
+			self.load_vel = self.load_vel + load_acceleration * self.dt
+			self.load_pos = self.load_pos + self.load_vel * self.dt + 0.5 * load_acceleration * self.dt * self.dt
+
+			# Quadrotor Dynamics
+			acc = thrust/self.mass * att_quaternion.rotation_matrix.dot(np.array([0.0, 0.0, 1.0])) + self.g			
+			vel = self.vel
+			self.vel = vel + acc * self.dt
+			self.pos = self.pos + vel * self.dt + 0.5*acc*self.dt*self.dt
+			
+			q_dot = att_quaternion.derivative(w)
+			self.att = self.att + q_dot.elements * self.dt
 
 	def control(self):
 		def acc2quat(desired_acc, yaw): # TODO: Yaw rotation
