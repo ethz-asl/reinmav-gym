@@ -14,3 +14,8 @@ register(
 	id='quadrotor2d-slungload-v0',
 	entry_point='gym_reinmav.envs:Quadrotor2DSlungload',
 )
+
+register(
+	id='quadrotor3d-v0',
+	entry_point='gym_reinmav.envs:Quadrotor3D',
+)
