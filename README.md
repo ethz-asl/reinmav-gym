@@ -19,7 +19,7 @@ Home-page: UNKNOWN
 Author: UNKNOWN
 Author-email: UNKNOWN
 License: UNKNOWN
-Location: /Users/Inkyu/Research/ETH_Postdoc/SideProjects/openai/venv/lib/python3.6/site-packages
+Location: /Users/YOUR_INSTALLED_PATH/openai/venv/lib/python3.6/site-packages
 Requires: gym
 Required-by: 
 ```
