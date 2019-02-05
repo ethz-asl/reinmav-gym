@@ -25,13 +25,12 @@ Required-by:
 ```
 
 # Testing
-(venv) Username@reinmav-gym $python ./test/test_reinmav.py
+Executing the following command should generate 4 plots (3D position, 1D position, velocity and yaw plots).
 
-``` __init__ called
-reset() called
-step() called
-render() called
-```
+``` $python ./test/test_reinmav.py ```
+
+![3D plot](http://drive.google.com/uc?export=view&id=1tiTP0UBm1NjB1Wpm53m2ThZQsTZ8N9cy)
+
 
 # openai gym example environments
 * Continuous mountain car: https://github.com/openai/gym/blob/master/gym/envs/classic_control/continuous_mountain_car.py
