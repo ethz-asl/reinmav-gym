@@ -32,13 +32,6 @@ class Quadrotor2DSlungload(gym.Env):
 
 		self.state = None
 
-		self.att = np.array([0.0])
-		self.pos = np.array([0.3, 0.0])
-		self.vel = np.array([1.0, 0.0])
-		self.load_pos = np.array([0.3, 0.0])
-		self.load_vel = np.array([3.0, 0.0])
-		self.slack = True
-
 		self.ref_pos = np.array([0.0, 0.0])
 		self.ref_vel = np.array([0.0, 0.0])
 
@@ -207,7 +200,7 @@ class Quadrotor2DSlungload(gym.Env):
 			ref.set_color(1,0,0)
 			self.viewer.add_geom(ref)
 
-		if self.pos is None: return None
+		if self.state is None: return None
 
 		state = self.state
 		ref_pos = self.ref_pos
