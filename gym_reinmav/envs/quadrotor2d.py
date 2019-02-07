@@ -20,6 +20,7 @@ from gym import error, spaces, utils
 from math import cos, sin, pi, atan2
 import numpy as np
 from numpy import linalg
+from gym.utils import seeding
 
 class Quadrotor2D(gym.Env):
 	metadata = {'render.modes': ['human']}
@@ -28,41 +29,85 @@ class Quadrotor2D(gym.Env):
 		self.dt = 0.01
 		self.g = np.array([0.0, -9.8])
 
-		self.att = np.array([0.0])
-		self.pos = np.array([0.3, 0.0])
-		self.vel = np.array([3.0, 0.0])
-
+		self.state = None
 		self.ref_pos = np.array([0.0, 0.0])
 		self.ref_vel = np.array([0.0, 0.0])
 
+		# Conditions to fail the episode
+		self.pos_threshold = 0.1
+		self.vel_threshold = 0.1
+
+		self.seed()
 		self.viewer = None
 		self.quadtrans = None
 		self.reftrans = None
 		self.x_range = 1.0
+		self.steps_beyond_done = None
 
+
+	def seed(self, seed=None):
+		self.np_random, seed = seeding.np_random(seed)
+		return [seed]
 
 	def step(self, action):
 		thrust = action[0] # Thrust command
 		w = action[1] # Angular velocity command
-		# acc = thrust/self.mass * np.array([cos(self.att + pi()/2), sin(self.att + pi()/2)]) + self.g
-		acc = thrust/self.mass * np.array([cos(self.att + pi/2), sin(self.att + pi/2)]) + self.g
-		self.vel = self.vel + acc * self.dt
-		self.pos = self.pos + self.vel * self.dt + 0.5*acc*self.dt*self.dt
-		self.att = self.att + w * self.dt
+
+		state = self.state
+		ref_pos = self.ref_pos
+		ref_vel = self.ref_vel
+
+		pos = np.array([state[0], state[1]]).flatten()
+		att = np.array([state[2]]).flatten()
+		vel = np.array([state[3], state[4]]).flatten()
+
+		acc = thrust/self.mass * np.array([cos(att + pi/2), sin(att + pi/2)]) + self.g
+		pos = pos + vel * self.dt + 0.5*acc*self.dt*self.dt
+		vel = vel + acc * self.dt
+		att = att + w * self.dt
+
+		self.state = (pos[0], pos[1], att, vel[0], vel[1])
+
+		done =  linalg.norm(pos, 2) < -self.pos_threshold \
+			and  linalg.norm(pos, 2) > self.pos_threshold \
+			and linalg.norm(vel, 2) < -self.vel_threshold \
+			and linalg.norm(vel, 2) > self.vel_threshold
+		done = bool(done)
+
+		if not done:
+		    reward = (-linalg.norm(pos, 2))
+		elif self.steps_beyond_done is None:
+		    # Pole just fell!
+		    self.steps_beyond_done = 0
+		    reward = 1.0
+		else:
+		    if self.steps_beyond_done == 0:
+		        logger.warn("You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.")
+		    self.steps_beyond_done += 1
+		    reward = 0.0
+
+		return np.array(self.state), reward, done, {}
 
 	def control(self):
 		Kp = -5.0
 		Kv = -4.0
-		tau = 0.1;
+		tau = 0.1
+		state = self.state
+		ref_pos = self.ref_pos
+		ref_vel = self.ref_vel
 
-		error_pos = self.pos - self.ref_pos
-		error_vel = self.vel - self.ref_vel
-		# %% Calculate desired acceleration
-		desired_acc = Kp * error_pos + Kv * error_vel + [0.0, 9.8];
-		desired_att = atan2(desired_acc[1], desired_acc[0]) - pi/2;
-		error_att = self.att - desired_att;
-		w = (-1/tau) * error_att;
-		thrust = self.mass * linalg.norm(desired_acc, 2);
+		pos = np.array([state[0], state[1]]).flatten()
+		att = np.array([state[2]]).flatten()
+		vel = np.array([state[3], state[4]]).flatten()
+
+		error_pos = pos - ref_pos
+		error_vel = vel - ref_vel
+		# Calculate desired acceleration
+		desired_acc = Kp * error_pos + Kv * error_vel + np.array([0.0, 9.8])
+		desired_att = atan2(desired_acc[1], desired_acc[0]) - pi/2
+		error_att = att - desired_att
+		w = (-1/tau) * error_att
+		thrust = self.mass * linalg.norm(desired_acc, 2)
 
 		action = np.array([thrust, w])
 
@@ -70,7 +115,7 @@ class Quadrotor2D(gym.Env):
 
 	def reset(self):
 		print("reset")
-		#self.state = np.array([self.np_random.uniform(low=-0.6, high=-0.4), 0])
+		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(5,1)))
 		return np.array(self.state)
 
 	def render(self, mode='human', close=False):
@@ -99,12 +144,13 @@ class Quadrotor2D(gym.Env):
 			ref.set_color(1,0,0)
 			self.viewer.add_geom(ref)
 
-		if self.pos is None: return None
+		if self.state is None: return None
 
-		x = self.pos
-		theta = self.att
-		quad_x = x[0]*scale+screen_width/2.0 # MIDDLE OF CART
-		quad_y = x[1]*scale+screen_height/2.0 # MIDDLE OF CART
+		state = self.state
+		x = np.array([state[0], state[1]]).flatten()
+		theta = self.state[2]
+		quad_x = x[0]*scale+screen_width/2.0 
+		quad_y = x[1]*scale+screen_height/2.0 
 		self.quadtrans.set_translation(quad_x, quad_y)
 		self.quadtrans.set_rotation(theta)
 
