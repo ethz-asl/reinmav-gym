@@ -20,6 +20,7 @@ from gym import error, spaces, utils
 from math import cos, sin, pi, atan2
 import numpy as np
 from numpy import linalg
+from gym.utils import seeding
 
 class Quadrotor2DSlungload(gym.Env):
 	metadata = {'render.modes': ['human']}
@@ -28,6 +29,8 @@ class Quadrotor2DSlungload(gym.Env):
 		self.load_mass = 0.1;
 		self.dt = 0.01
 		self.g = np.array([0.0, -9.8])
+
+		self.state = None
 
 		self.att = np.array([0.0])
 		self.pos = np.array([0.3, 0.0])
@@ -41,41 +44,62 @@ class Quadrotor2DSlungload(gym.Env):
 
 		self.tether_length = 0.5
 
+		# Conditions to fail the episode
+		self.pos_threshold = 0.1
+		self.vel_threshold = 0.1
+
+
+		self.seed()
 		self.viewer = None
 		self.quadtrans = None
 		self.loadtrans = None
 		self.reftrans = None
 		self.x_range = 1.0
+		self.steps_beyond_done = None
 
+
+	def seed(self, seed=None):
+		self.np_random, seed = seeding.np_random(seed)
+		return [seed]
 
 	def step(self, action):
 		thrust = action[0] # Thrust command
 		w = action[1] # Angular velocity command
 
-		tether_vec = self.load_pos - self.pos;
+		state = self.state
+		ref_pos = self.ref_pos
+		ref_vel = self.ref_vel
+
+		pos = np.array([state[0], state[1]]).flatten()
+		att = np.array([state[2]]).flatten()
+		vel = np.array([state[3], state[4]]).flatten()
+		load_pos = np.array([state[5], state[6]]).flatten()
+		load_vel = np.array([state[7], state[8]]).flatten()
+
+		tether_vec = load_pos - pos;
 		unit_tether_vec = tether_vec / linalg.norm(tether_vec)
 
 		if linalg.norm(tether_vec) >= self.tether_length :
-			thrust_vec = thrust*np.array([cos(self.att+ pi/2), sin(self.att + pi/2)])
-			load_acceleration = np.inner(unit_tether_vec, thrust_vec - self.mass * self.tether_length * np.inner(self.load_vel, self.load_vel)) * unit_tether_vec
+			thrust_vec = thrust*np.array([cos(att+ pi/2), sin(att + pi/2)])
+			load_acceleration = np.inner(unit_tether_vec, thrust_vec - self.mass * self.tether_length * np.inner(load_vel, load_vel)) * unit_tether_vec
 			load_acceleration = (1/(self.mass + self.load_mass)) * load_acceleration + self.g
-			self.load_vel = self.load_vel + load_acceleration * self.dt
-			self.load_pos = self.load_pos + self.load_vel * self.dt + 0.5 * load_acceleration * self.dt * self.dt
+			load_vel = load_vel + load_acceleration * self.dt
+			load_pos = load_pos + load_vel * self.dt + 0.5 * load_acceleration * self.dt * self.dt
 
 			T = self.load_mass * linalg.norm(-self.g + load_acceleration) * unit_tether_vec
 
 			slack = False;
 
 			# Quadrotor dynamics
-			acc = thrust/self.mass  * np.array([cos(self.att + pi/2), sin(self.att + pi/2)]) + self.g + T/self.mass
-			self.vel = self.vel + acc * self.dt
-			self.pos = self.pos + self.vel * self.dt + 0.5 * acc * self.dt * self.dt
-			self.att = self.att + w * self.dt
+			acc = thrust/self.mass  * np.array([cos(att + pi/2), sin(att + pi/2)]) + self.g + T/self.mass
+			vel = vel + acc * self.dt
+			pos = pos + vel * self.dt + 0.5 * acc * self.dt * self.dt
+			att = att + w * self.dt
 
 			# Enforce kinematic constraints
-			load_direction = (self.load_pos - self.pos) / linalg.norm(self.load_pos - self.pos)
-			self.load_pos = self.pos + load_direction * self.tether_length
-			self.load_vel = self.load_vel - np.inner(self.load_vel - self.vel, load_direction) * load_direction
+			load_direction = (load_pos - pos) / linalg.norm(load_pos - pos)
+			load_pos = pos + load_direction * self.tether_length
+			load_vel = load_vel - np.inner(load_vel - vel, load_direction) * load_direction
 
 
 		else :
@@ -84,26 +108,59 @@ class Quadrotor2DSlungload(gym.Env):
 
 			# Load dynamics
 			load_acceleration = self.g
-			self.load_vel = self.load_vel + load_acceleration * self.dt
-			self.load_pos = self.load_pos + self.load_vel * self.dt + 0.5 * load_acceleration * self.dt * self.dt
+			load_vel = load_vel + load_acceleration * self.dt
+			load_pos = load_pos + load_vel * self.dt + 0.5 * load_acceleration * self.dt * self.dt
 
 			# Quadrotor dynamics
-			acc = thrust/self.mass * np.array([cos(self.att + pi/2), sin(self.att + pi/2)]) + self.g
-			self.vel = self.vel + acc * self.dt
-			self.pos = self.pos + self.vel * self.dt + 0.5*acc*self.dt*self.dt
-			self.att = self.att + w * self.dt
+			acc = thrust/self.mass * np.array([cos(att + pi/2), sin(att + pi/2)]) + self.g
+			vel = vel + acc * self.dt
+			pos = pos + vel * self.dt + 0.5*acc*self.dt*self.dt
+			att = att + w * self.dt
+
+		self.state = (pos[0], pos[1], att, vel[0], vel[1], load_pos[0], load_pos[1], load_vel[0], load_vel[1])
+
+		done =  linalg.norm(load_pos, 2) < -self.pos_threshold \
+			and  linalg.norm(load_pos, 2) > self.pos_threshold \
+			and linalg.norm(load_vel, 2) < -self.vel_threshold \
+			and linalg.norm(load_vel, 2) > self.vel_threshold
+		done = bool(done)
+
+		if not done:
+		    reward = (-linalg.norm(pos, 2))
+		elif self.steps_beyond_done is None:
+		    # Pole just fell!
+		    self.steps_beyond_done = 0
+		    reward = 1.0
+		else:
+		    if self.steps_beyond_done == 0:
+		        logger.warn("You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.")
+		    self.steps_beyond_done += 1
+		    reward = 0.0
+
+		return np.array(self.state), reward, done, {}
 
 	def control(self):
 		Kp = -5.0
 		Kv = -4.0
 		tau = 0.1;
 
-		error_pos = self.pos - self.ref_pos
-		error_vel = self.vel - self.ref_vel
+
+		state = self.state
+		ref_pos = self.ref_pos
+		ref_vel = self.ref_vel
+
+		pos = np.array([state[0], state[1]]).flatten()
+		att = np.array([state[2]]).flatten()
+		vel = np.array([state[3], state[4]]).flatten()
+		load_pos = np.array([state[5], state[6]]).flatten()
+		load_vel = np.array([state[7], state[8]]).flatten()
+
+		error_pos = pos - self.ref_pos
+		error_vel = vel - self.ref_vel
 		# %% Calculate desired acceleration
 		desired_acc = Kp * error_pos + Kv * error_vel + [0.0, 9.8];
 		desired_att = atan2(desired_acc[1], desired_acc[0]) - pi/2;
-		error_att = self.att - desired_att;
+		error_att = att - desired_att;
 		w = (-1/tau) * error_att;
 		thrust = self.mass * linalg.norm(desired_acc, 2);
 
@@ -113,7 +170,7 @@ class Quadrotor2DSlungload(gym.Env):
 
 	def reset(self):
 		print("reset")
-		#self.state = np.array([self.np_random.uniform(low=-0.6, high=-0.4), 0])
+		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(9,1)))
 		return np.array(self.state)
 
 	def render(self, mode='human', close=False):
@@ -152,16 +209,25 @@ class Quadrotor2DSlungload(gym.Env):
 
 		if self.pos is None: return None
 
-		x = self.pos
-		theta = self.att
+		state = self.state
+		ref_pos = self.ref_pos
+		ref_vel = self.ref_vel
+
+		pos = np.array([state[0], state[1]]).flatten()
+		att = np.array([state[2]]).flatten()
+		vel = np.array([state[3], state[4]]).flatten()
+		load_pos = np.array([state[5], state[6]]).flatten()
+		load_vel = np.array([state[7], state[8]]).flatten()
+
+		x = pos
+		theta = att
 		quad_x = x[0]*scale+screen_width/2.0 # MIDDLE OF CART
 		quad_y = x[1]*scale+screen_height/2.0 # MIDDLE OF CART
 		self.quadtrans.set_translation(quad_x, quad_y)
 		self.quadtrans.set_rotation(theta)
 
-		x_l = self.load_pos
+		x_l = load_pos
 		np.set_printoptions(precision=3)
-		print(self.load_pos)
 		load_x = x_l[0]*scale+screen_width/2.0
 		load_y = x_l[1]*scale+screen_height/2.0
 		self.loadtrans.set_translation(load_x, load_y)
