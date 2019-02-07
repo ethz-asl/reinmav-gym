@@ -3,6 +3,9 @@
 # reinmav-gym
 openai gym environment for reinforcement quadrotor
 
+# Requirements
+python3.6 (or above) and vpython
+
 # Installation
 (venv) Username@reinmav-gym $ pip install -e .
 
