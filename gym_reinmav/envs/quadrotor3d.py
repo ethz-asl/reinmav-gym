@@ -260,6 +260,19 @@ class Quadrotor3D(gym.Env):
 		self.render_quad2.up.x = z_axis[0]
 		self.render_quad2.up.y = z_axis[1]
 		self.render_quad2.up.z = z_axis[2]
+		self.render_rotor1.up.x = y_axis[0]
+		self.render_rotor1.up.y = y_axis[1]
+		self.render_rotor1.up.z = y_axis[2]
+		self.render_rotor2.up.x = y_axis[0]
+		self.render_rotor2.up.y = y_axis[1]
+		self.render_rotor2.up.z = y_axis[2]
+		self.render_rotor3.up.x = y_axis[0]
+		self.render_rotor3.up.y = y_axis[1]
+		self.render_rotor3.up.z = y_axis[2]
+		self.render_rotor4.up.x = y_axis[0]
+		self.render_rotor4.up.y = y_axis[1]
+		self.render_rotor4.up.z = y_axis[2]
+
 
 
 		self.render_ref.pos.x = ref_pos[0]
