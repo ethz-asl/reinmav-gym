@@ -20,6 +20,7 @@ from gym import error, spaces, utils
 from math import cos, sin, pi, atan2
 import numpy as np
 from numpy import linalg
+from gym.utils import seeding
 from pyquaternion import Quaternion
 
 class Quadrotor3DSlungload(gym.Env):
@@ -30,18 +31,18 @@ class Quadrotor3DSlungload(gym.Env):
 		self.dt = 0.01
 		self.g = np.array([0.0, 0.0, -9.8])
 
-		self.att = np.array([1.0, 0.0, 0.0, 0.0])
-		self.pos = np.array([0.3, 0.1, 1.0])
-		self.vel = np.array([3.0, 0.0, 0.0])
-		self.load_pos = np.array([0.0, -0.1, -0.7])
-		self.load_vel = np.array([3.0, 0.0, 0.0])
-
+		self.state = None
 
 		self.ref_pos = np.array([0.0, 0.0, 1.0])
 		self.ref_vel = np.array([0.0, 0.0, 0.0])
 
+		# Conditions to fail the episode
+		self.pos_threshold = 0.1
+		self.vel_threshold = 0.1
+
 		self.tether_length = 1.5
 
+		self.seed()
 		self.viewer = None
 		self.render_quad1 = None
 		self.render_quad2 = None
@@ -55,58 +56,92 @@ class Quadrotor3DSlungload(gym.Env):
 		self.render_tether = None
 		self.x_range = 1.0
 
+	def seed(self, seed=None):
+		self.np_random, seed = seeding.np_random(seed)
+		return [seed]
+
 
 	def step(self, action):
 		thrust = action[0] # Thrust command
 		w = action[1:4] # Angular velocity command
 
-		tether_vec = self.load_pos - self.pos
+		state = self.state
+		ref_pos = self.ref_pos
+		ref_vel = self.ref_vel
+
+		pos = np.array([state[0], state[1], state[2]]).flatten()
+		att = np.array([state[3], state[4], state[5], state[6]]).flatten()
+		vel = np.array([state[7], state[8], state[9]]).flatten()
+		load_pos = np.array([state[10], state[11], state[12]]).flatten()
+		load_vel = np.array([state[13], state[14], state[15]]).flatten()
+
+		tether_vec = load_pos - pos
 		unit_tether_vec = tether_vec / linalg.norm(tether_vec)
 
 		if linalg.norm(tether_vec) >= self.tether_length:
 
 			#Quadrotor Dynamics
-			att_quaternion = Quaternion(self.att)
+			att_quaternion = Quaternion(att)
 
 			thrust_vec = thrust*att_quaternion.rotation_matrix.dot(np.array([0.0, 0.0, 1.0]))
-			load_acceleration = np.inner(unit_tether_vec, thrust_vec - self.mass * self.tether_length * np.inner(self.load_vel, self.load_vel)) * unit_tether_vec
+			load_acceleration = np.inner(unit_tether_vec, thrust_vec - self.mass * self.tether_length * np.inner(load_vel, load_vel)) * unit_tether_vec
 			load_acceleration = (1/(self.mass + self.load_mass)) * load_acceleration + self.g
-			self.load_vel = self.load_vel + load_acceleration * self.dt
-			self.load_pos = self.load_pos + self.load_vel * self.dt + 0.5 * load_acceleration * self.dt * self.dt
+			load_pos = load_pos + load_vel * self.dt + 0.5 * load_acceleration * self.dt * self.dt
+			load_vel = load_vel + load_acceleration * self.dt
 
 			T = self.load_mass * linalg.norm(-self.g + load_acceleration) * unit_tether_vec
 
 			#Quadrotor Dynamics
 			acc = thrust/self.mass * att_quaternion.rotation_matrix.dot(np.array([0.0, 0.0, 1.0])) + self.g + T/self.mass
-			vel = self.vel
-			self.vel = vel + acc * self.dt
-			self.pos = self.pos + vel * self.dt + 0.5*acc*self.dt*self.dt
+			pos = pos + vel * self.dt + 0.5*acc*self.dt*self.dt
+			vel = vel + acc * self.dt
 			
 			q_dot = att_quaternion.derivative(w)
-			self.att = self.att + q_dot.elements * self.dt
+			att = att + q_dot.elements * self.dt
 
 			## Enforce kinematic constraints
-			load_direction = (self.load_pos - self.pos) / linalg.norm(self.load_pos - self.pos)
-			self.load_pos = self.pos + load_direction * self.tether_length
-			self.load_vel = self.load_vel - np.inner(self.load_vel - self.vel, load_direction) * load_direction
+			load_direction = (load_pos - pos) / linalg.norm(load_pos - pos)
+			load_pos = pos + load_direction * self.tether_length
+			load_vel = load_vel - np.inner(load_vel - vel, load_direction) * load_direction
 
 
 		else:
-			att_quaternion = Quaternion(self.att)
+			att_quaternion = Quaternion(att)
 
 			# Load dynamics
 			load_acceleration = self.g
-			self.load_vel = self.load_vel + load_acceleration * self.dt
-			self.load_pos = self.load_pos + self.load_vel * self.dt + 0.5 * load_acceleration * self.dt * self.dt
+			load_pos = load_pos + load_vel * self.dt + 0.5 * load_acceleration * self.dt * self.dt
+			load_vel = load_vel + load_acceleration * self.dt
 
 			# Quadrotor Dynamics
 			acc = thrust/self.mass * att_quaternion.rotation_matrix.dot(np.array([0.0, 0.0, 1.0])) + self.g			
-			vel = self.vel
-			self.vel = vel + acc * self.dt
-			self.pos = self.pos + vel * self.dt + 0.5*acc*self.dt*self.dt
+			pos = pos + vel * self.dt + 0.5*acc*self.dt*self.dt
+			vel = vel + acc * self.dt
 			
 			q_dot = att_quaternion.derivative(w)
-			self.att = self.att + q_dot.elements * self.dt
+			att = att + q_dot.elements * self.dt
+
+		self.state = (pos[0], pos[1], pos[2], att[0], att[1], att[2], att[3], vel[0], vel[1], vel[2], load_pos[0], load_pos[1], load_pos[2], load_vel[0], load_vel[1], load_vel[2])
+
+		done =  linalg.norm(pos, 2) < -self.pos_threshold \
+			and  linalg.norm(pos, 2) > self.pos_threshold \
+			and linalg.norm(vel, 2) < -self.vel_threshold \
+			and linalg.norm(vel, 2) > self.vel_threshold
+		done = bool(done)
+
+		if not done:
+		    reward = (-linalg.norm(pos, 2))
+		elif self.steps_beyond_done is None:
+		    # Pole just fell!
+		    self.steps_beyond_done = 0
+		    reward = 1.0
+		else:
+		    if self.steps_beyond_done == 0:
+		        logger.warn("You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.")
+		    self.steps_beyond_done += 1
+		    reward = 0.0
+
+		return np.array(self.state), reward, done, {}
 
 	def control(self):
 		def acc2quat(desired_acc, yaw): # TODO: Yaw rotation
@@ -129,8 +164,19 @@ class Quadrotor3DSlungload(gym.Env):
 		Kv = np.array([-4.0, -4.0, -4.0])
 		tau = 0.3;
 
-		error_pos = self.pos - self.ref_pos
-		error_vel = self.vel - self.ref_vel
+		state = self.state
+		ref_pos = self.ref_pos
+		ref_vel = self.ref_vel
+
+		pos = np.array([state[0], state[1], state[2]]).flatten()
+		att = np.array([state[3], state[4], state[5], state[6]]).flatten()
+		vel = np.array([state[7], state[8], state[9]]).flatten()
+		load_pos = np.array([state[10], state[11], state[12]]).flatten()
+		load_vel = np.array([state[13], state[14], state[15]]).flatten()
+
+
+		error_pos = pos - ref_pos
+		error_vel = vel - ref_vel
 
 		# %% Calculate desired acceleration
 		reference_acc = np.array([0.0, 0.0, 0.0])
@@ -141,7 +187,7 @@ class Quadrotor3DSlungload(gym.Env):
 		desired_att = acc2quat(desired_acc, 0.0)
 
 		desired_quat = Quaternion(desired_att)
-		current_quat = Quaternion(self.att)
+		current_quat = Quaternion(att)
 
 		error_att = current_quat.conjugate * desired_quat
 		qe = error_att.elements
@@ -158,62 +204,73 @@ class Quadrotor3DSlungload(gym.Env):
 
 	def reset(self):
 		print("reset")
-		#self.state = np.array([self.np_random.uniform(low=-0.6, high=-0.4), 0])
+		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(16,1)))
 		return np.array(self.state)
 
 	def render(self, mode='human', close=False):
 		from vpython import box, sphere, color, vector, rate, canvas, cylinder, arrow
-		current_quat = Quaternion(self.att)
+
+		state = self.state
+		ref_pos = self.ref_pos
+		ref_vel = self.ref_vel
+
+		pos = np.array([state[0], state[1], state[2]]).flatten()
+		att = np.array([state[3], state[4], state[5], state[6]]).flatten()
+		vel = np.array([state[7], state[8], state[9]]).flatten()
+		load_pos = np.array([state[10], state[11], state[12]]).flatten()
+		load_vel = np.array([state[13], state[14], state[15]]).flatten()
+
+		current_quat = Quaternion(att)
 		x_axis = current_quat.rotation_matrix.dot(np.array([1.0, 0.0, 0.0]))
 		y_axis = current_quat.rotation_matrix.dot(np.array([0.0, 1.0, 0.0]))
 		z_axis = current_quat.rotation_matrix.dot(np.array([0.0, 0.0, 1.0]))
-		tether_vec = self.load_pos - self.pos
+		tether_vec = load_pos - pos
 
 		if self.viewer is None:
 			self.viewer = canvas(title='Quadrotor 3D Slungload', width=640, height=480, center=vector(0, 0, 0), forward=vector(1, 1, -1), up=vector(0, 0, 1), background=color.white)
-			self.render_quad1 = box(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(x_axis[0],x_axis[1],x_axis[2]), length=0.2, height=0.05, width=0.05)
-			self.render_quad2 = box(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(y_axis[0],y_axis[1],y_axis[2]), length=0.2, height=0.05, width=0.05)
-			self.render_rotor1 = cylinder(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
-			self.render_rotor2 = cylinder(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
-			self.render_rotor3 = cylinder(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
-			self.render_rotor4 = cylinder(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
-			self.render_velocity = pointer = arrow(pos=vector(self.pos[0],self.pos[1],0), axis=vector(self.vel[0],self.vel[1],self.vel[2]), shaftwidth=0.05, color=color.green)
-			self.render_ref = sphere(canvas = self.viewer, pos=vector(self.ref_pos[0], self.ref_pos[1], self.ref_pos[2]), radius=0.02, color=color.blue, make_trail = True)
-			self.render_tether = cylinder(canvas = self.viewer, pos=vector(self.pos[0],self.pos[1],0), axis=vector(tether_vec[0],tether_vec[1],tether_vec[2]), radius=0.01, color=color.black)
-			self.render_load = sphere(canvas = self.viewer, pos=vector(self.load_pos[0], self.load_pos[1], self.load_pos[2]), radius=0.1, color=color.red, make_trail = True)
-		if self.pos is None: return None
+			self.render_quad1 = box(canvas = self.viewer, pos=vector(pos[0],pos[1],0), axis=vector(x_axis[0],x_axis[1],x_axis[2]), length=0.2, height=0.05, width=0.05)
+			self.render_quad2 = box(canvas = self.viewer, pos=vector(pos[0],pos[1],0), axis=vector(y_axis[0],y_axis[1],y_axis[2]), length=0.2, height=0.05, width=0.05)
+			self.render_rotor1 = cylinder(canvas = self.viewer, pos=vector(pos[0],pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
+			self.render_rotor2 = cylinder(canvas = self.viewer, pos=vector(pos[0],pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
+			self.render_rotor3 = cylinder(canvas = self.viewer, pos=vector(pos[0],pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
+			self.render_rotor4 = cylinder(canvas = self.viewer, pos=vector(pos[0],pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
+			self.render_velocity = pointer = arrow(pos=vector(pos[0],pos[1],0), axis=vector(vel[0],vel[1],vel[2]), shaftwidth=0.05, color=color.green)
+			self.render_ref = sphere(canvas = self.viewer, pos=vector(ref_pos[0], ref_pos[1], ref_pos[2]), radius=0.02, color=color.blue, make_trail = True)
+			self.render_tether = cylinder(canvas = self.viewer, pos=vector(pos[0],pos[1],0), axis=vector(tether_vec[0],tether_vec[1],tether_vec[2]), radius=0.01, color=color.black)
+			self.render_load = sphere(canvas = self.viewer, pos=vector(load_pos[0], load_pos[1], load_pos[2]), radius=0.1, color=color.red, make_trail = True)
+		if self.state is None: return None
 
-		self.render_quad1.pos.x = self.pos[0]
-		self.render_quad1.pos.y = self.pos[1]
-		self.render_quad1.pos.z = self.pos[2]
-		self.render_quad2.pos.x = self.pos[0]
-		self.render_quad2.pos.y = self.pos[1]
-		self.render_quad2.pos.z = self.pos[2]
+		self.render_quad1.pos.x = pos[0]
+		self.render_quad1.pos.y = pos[1]
+		self.render_quad1.pos.z = pos[2]
+		self.render_quad2.pos.x = pos[0]
+		self.render_quad2.pos.y = pos[1]
+		self.render_quad2.pos.z = pos[2]
 		rotor_pos = 0.5*x_axis
-		self.render_rotor1.pos.x = self.pos[0] + rotor_pos[0]
-		self.render_rotor1.pos.y = self.pos[1] + rotor_pos[1]
-		self.render_rotor1.pos.z = self.pos[2] + rotor_pos[2]
+		self.render_rotor1.pos.x = pos[0] + rotor_pos[0]
+		self.render_rotor1.pos.y = pos[1] + rotor_pos[1]
+		self.render_rotor1.pos.z = pos[2] + rotor_pos[2]
 		rotor_pos = (-0.5)*x_axis
-		self.render_rotor2.pos.x = self.pos[0] + rotor_pos[0]
-		self.render_rotor2.pos.y = self.pos[1] + rotor_pos[1]
-		self.render_rotor2.pos.z = self.pos[2] + rotor_pos[2]
+		self.render_rotor2.pos.x = pos[0] + rotor_pos[0]
+		self.render_rotor2.pos.y = pos[1] + rotor_pos[1]
+		self.render_rotor2.pos.z = pos[2] + rotor_pos[2]
 		rotor_pos = 0.5*y_axis
-		self.render_rotor3.pos.x = self.pos[0] + rotor_pos[0]
-		self.render_rotor3.pos.y = self.pos[1] + rotor_pos[1]
-		self.render_rotor3.pos.z = self.pos[2] + rotor_pos[2]
+		self.render_rotor3.pos.x = pos[0] + rotor_pos[0]
+		self.render_rotor3.pos.y = pos[1] + rotor_pos[1]
+		self.render_rotor3.pos.z = pos[2] + rotor_pos[2]
 		rotor_pos = (-0.5)*y_axis
-		self.render_rotor4.pos.x = self.pos[0] + rotor_pos[0]
-		self.render_rotor4.pos.y = self.pos[1] + rotor_pos[1]
-		self.render_rotor4.pos.z = self.pos[2] + rotor_pos[2]
-		self.render_velocity.pos.x = self.pos[0]
-		self.render_velocity.pos.y = self.pos[1]
-		self.render_velocity.pos.z = self.pos[2]
-		self.render_load.pos.x = self.load_pos[0]
-		self.render_load.pos.y = self.load_pos[1]
-		self.render_load.pos.z = self.load_pos[2]
-		self.render_tether.pos.x = self.pos[0]
-		self.render_tether.pos.y = self.pos[1]
-		self.render_tether.pos.z = self.pos[2]
+		self.render_rotor4.pos.x = pos[0] + rotor_pos[0]
+		self.render_rotor4.pos.y = pos[1] + rotor_pos[1]
+		self.render_rotor4.pos.z = pos[2] + rotor_pos[2]
+		self.render_velocity.pos.x = pos[0]
+		self.render_velocity.pos.y = pos[1]
+		self.render_velocity.pos.z = pos[2]
+		self.render_load.pos.x = load_pos[0]
+		self.render_load.pos.y = load_pos[1]
+		self.render_load.pos.z = load_pos[2]
+		self.render_tether.pos.x = pos[0]
+		self.render_tether.pos.y = pos[1]
+		self.render_tether.pos.z = pos[2]
 
 		self.render_quad1.axis.x = x_axis[0]
 		self.render_quad1.axis.y = x_axis[1]	
@@ -236,9 +293,9 @@ class Quadrotor3DSlungload(gym.Env):
 		self.render_tether.axis.x = tether_vec[0]
 		self.render_tether.axis.y = tether_vec[1]
 		self.render_tether.axis.z = tether_vec[2]
-		self.render_velocity.axis.x = 0.5 * self.vel[0]
-		self.render_velocity.axis.y = 0.5 * self.vel[1]
-		self.render_velocity.axis.z = 0.5 * self.vel[2]
+		self.render_velocity.axis.x = 0.5 * vel[0]
+		self.render_velocity.axis.y = 0.5 * vel[1]
+		self.render_velocity.axis.z = 0.5 * vel[2]
 
 
 		self.render_quad1.up.x = z_axis[0]
@@ -249,9 +306,9 @@ class Quadrotor3DSlungload(gym.Env):
 		self.render_quad2.up.z = z_axis[2]
 
 
-		self.render_ref.pos.x = self.ref_pos[0]
-		self.render_ref.pos.y = self.ref_pos[1]
-		self.render_ref.pos.z = self.ref_pos[2]
+		self.render_ref.pos.x = ref_pos[0]
+		self.render_ref.pos.y = ref_pos[1]
+		self.render_ref.pos.z = ref_pos[2]
 
 		rate(100)
 
