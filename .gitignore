@@ -1,6 +1,12 @@
 *.swp
-*.egg-info/*
 *.pdf
-*.pyc
-# pycharm artifacts
+*.env
+
+# ide artifacts
 .idea*
+.vscode
+
+# python artifacts
+__pycached__/
+*.pyc
+*.egg-info/*
