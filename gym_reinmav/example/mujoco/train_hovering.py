@@ -11,7 +11,7 @@ from baselines import logger
 from importlib import import_module
 from autolab_core import YamlConfig
 
-from mujocoquad_gym.envs import MujocoQuadForceEnv
+from gym_reinmav.envs.mujoco import MujocoQuadForceEnv
 
 try:
     from mpi4py import MPI
