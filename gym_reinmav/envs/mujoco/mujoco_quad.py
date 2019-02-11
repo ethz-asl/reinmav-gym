@@ -7,7 +7,7 @@ from gym.envs.mujoco import mujoco_env
 class MujocoQuadEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(self):
 
-        xml_path = os.path.join(os.path.dirname(__file__), "../assets", "quadrotor_force.xml")
+        xml_path = os.path.join(os.path.dirname(__file__), "./assets", "quadrotor_force.xml")
 
         utils.EzPickle.__init__(self)
         mujoco_env.MujocoEnv.__init__(self, xml_path, 2)
