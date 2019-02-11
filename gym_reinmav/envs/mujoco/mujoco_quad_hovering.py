@@ -13,12 +13,15 @@ class MujocoQuadHoveringEnv(MujocoQuadEnv):
         ob = self._get_obs()
 
         alive_bonus = 100
-        reward = - np.sum(np.square(ob[0:3] - np.array([0.0, 0, 1.0]))) * 100 \
-                 - np.sum(np.square(ob[7:] - np.zeros(6))) \
-                 + np.sum(a) * 100 \
+        reward = - np.sum(np.square(ob[0:3] - np.array([0.0, 0, 1.0]))) * 10 \
+                 - np.sum(np.square(ob[7:] - np.zeros(6))) * 0.1 \
+                 + np.sum(a) * 10 \
                  + alive_bonus
 
-        notdone = np.isfinite(ob).all() and ob[2] > 0.5
+        notdone = np.isfinite(ob).all() \
+                  and ob[2] > 0.3 \
+                  and abs(ob[0]) < 2.0 \
+                  and abs(ob[1]) < 2.0
 
         done = not notdone
         return ob, reward, done, {}

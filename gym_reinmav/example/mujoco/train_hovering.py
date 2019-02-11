@@ -124,13 +124,18 @@ def build_env(args):
 
 
 def main():
+
+    # tensorboard log
+    logdir = os.path.join(os.path.curdir, 'log', 'mujoco')
+    logformat = ['tensorboard', 'stdout', 'log']
+
     args = parse_args()
 
     if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:
         rank = 0
-        logger.configure()
+        logger.configure(dir=logdir, format_strs=logformat)
     else:
-        logger.configure(format_strs=[])
+        logger.configure(dir=logdir, format_strs=[])
         rank = MPI.COMM_WORLD.Get_rank()
 
     model, env = train(args)

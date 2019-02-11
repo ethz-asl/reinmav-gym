@@ -10,3 +10,7 @@
 __pycached__/
 *.pyc
 *.egg-info/*
+
+# log
+log/
+logs/
