@@ -25,13 +25,35 @@ from gym_reinmav.envs.mujoco import MujocoQuadQuaternionEnv
 
 class Quadrotor:
     def __init__(self, ref_pos, ref_vel):
-        self.state = None
-        self.ref_pos = ref_pos
-        self.ref_vel = ref_vel
+        self._state = None
+        self._ref_pos = ref_pos
+        self._ref_vel = ref_vel
+        self._g = np.array([0.0, 0.0, -9.81])
 
     @property
     def state(self):
-        return self.state
+        return self._state
+
+    @property
+    def ref_pos(self):
+        return self._ref_pos
+
+    @property
+    def ref_vel(self):
+        return self._ref_vel
+
+    @property
+    def g(self):
+        return self._g
+
+    @ref_pos.setter
+    def ref_pos(self, ref_pos):
+        self._ref_pos = ref_pos
+
+    @state.setter
+    def state(self, state):
+        self._state = state
+
 
 def control(quat):
     def acc2quat(desired_acc, yaw):  # TODO: Yaw rotation
@@ -90,13 +112,17 @@ def control(quat):
 
     return action
 
+
 def main():
 
-    mass = 1.0
+    # TODO no hardcoding!
     dt = 0.01
-    g = np.array([0.0, 0.0, -9.8])
+    R = 0.5  # trajectory radius
+    w = 0.1  # trajectory angular speed (rad/s)
 
-    ref_pos = np.array([0.0, 0.0, 1.0])
+    ref_z = 1.0
+
+    ref_pos = np.array([0.0, 0.0, ref_z])
     ref_vel = np.array([0.0, 0.0, 0.0])
 
     env = gym.make('MujocoQuadQuat-v0')
@@ -105,8 +131,14 @@ def main():
     # [x, y, z, q0, q1, q2, q3]
     observation = env.reset()
     quat.state = observation
-    for t in range(1000):
+    for t in range(10000):
         env.render()
+
+        # quat.ref_pos = np.array([
+        #     R * np.cos(w * dt * t),
+        #     R * np.sin(w * dt * t),
+        #     ref_z
+        # ])
 
         action = control(quat=quat)
         observation, reward, done, info = env.step(action)

@@ -83,6 +83,8 @@ class MotorParam:
 
 
 def main():
+
+    # TODO no hardcoding!
     dt = 0.01
     mass = 0.3
     gravity = 9.81
