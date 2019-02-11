@@ -8,5 +8,10 @@ from gym_reinmav.envs.quadrotor3d_slungload import Quadrotor3DSlungload
 
 register(
     id='MujocoQuadForce-v0',
-    entry_point='gym_reinmav.envs.mujoco:MujocoQuadForceEnv',
+    entry_point='gym_reinmav.envs.mujoco:MujocoQuadEnv',
+)
+
+register(
+    id='MujocoQuadForce-v1',
+    entry_point='gym_reinmav.envs.mujoco:MujocoQuadHoveringEnv',
 )

@@ -5,24 +5,33 @@ from gym.envs.mujoco import mujoco_env
 
 
 class MujocoQuadEnv(mujoco_env.MujocoEnv, utils.EzPickle):
-    def __init__(self):
+    def __init__(self, xml_name="quadrotor_ground.xml"):
 
-        xml_path = os.path.join(os.path.dirname(__file__), "./assets", "quadrotor_force.xml")
+        xml_path = os.path.join(os.path.dirname(__file__), "./assets", xml_name)
 
         utils.EzPickle.__init__(self)
         mujoco_env.MujocoEnv.__init__(self, xml_path, 2)
 
     def step(self, a):
         reward = 0
-        self.do_simulation(a, self.frame_skip)
+        self.do_simulation(self.clip_action(a), self.frame_skip)
         ob = self._get_obs()
         notdone = np.isfinite(ob).all()
         done = not notdone
         return ob, reward, done, {}
 
+    def clip_action(self, action):
+        """
+        clip action to [0, inf]
+        :param action:
+        :return: clipped action
+        """
+        action = np.clip(action, a_min=0, a_max=np.inf)
+        return action
+
     def reset_model(self):
-        qpos = self.init_qpos + self.np_random.uniform(size=self.model.nq, low=-0.01, high=0.01)
-        qvel = self.init_qvel + self.np_random.uniform(size=self.model.nv, low=-0.01, high=0.01)
+        qpos = self.init_qpos
+        qvel = self.init_qvel
         self.set_state(qpos, qvel)
         return self._get_obs()
 
@@ -32,4 +41,4 @@ class MujocoQuadEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def viewer_setup(self):
         v = self.viewer
         v.cam.trackbodyid = 0
-        v.cam.distance = self.model.stat.extent
+        v.cam.distance = self.model.stat.extent * 10

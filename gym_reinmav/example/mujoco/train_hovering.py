@@ -11,7 +11,7 @@ from baselines import logger
 from importlib import import_module
 from autolab_core import YamlConfig
 
-from gym_reinmav.envs.mujoco import MujocoQuadForceEnv
+from gym_reinmav.envs.mujoco import MujocoQuadHoveringEnv
 
 try:
     from mpi4py import MPI
@@ -100,12 +100,6 @@ def build_env(args):
     alg = args.alg
     seed = args.seed
 
-    # load mujocoquad_gym env
-    # try:
-    #     env = MujocoQuadForceEnv
-    # except ImportError:
-    #     raise ImportError('cannot find MujocoQuadForceEnv')
-
     # tf config
     config = tf.ConfigProto(allow_soft_placement=True,
                             intra_op_parallelism_threads=1,
@@ -115,12 +109,13 @@ def build_env(args):
 
     flatten_dict_observations = alg not in {'her'}
 
-    env = make_vec_env('MujocoQuadForce-v0',
+    env = make_vec_env('MujocoQuadForce-v1',
                        'mujoco',
                        args.num_env or 1,
                        seed,
                        reward_scale=args.reward_scale,
                        flatten_dict_observations=flatten_dict_observations)
+    # env = ActionClipWrapper(env)
 
     # if env_type == 'mujoco':
     #     env = VecNormalize(env)
@@ -129,13 +124,18 @@ def build_env(args):
 
 
 def main():
+
+    # tensorboard log
+    logdir = os.path.join(os.path.curdir, 'log', 'mujoco')
+    logformat = ['tensorboard', 'stdout', 'log']
+
     args = parse_args()
 
     if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:
         rank = 0
-        logger.configure()
+        logger.configure(dir=logdir, format_strs=logformat)
     else:
-        logger.configure(format_strs=[])
+        logger.configure(dir=logdir, format_strs=[])
         rank = MPI.COMM_WORLD.Get_rank()
 
     model, env = train(args)
