@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 
-from gym_reinmav.envs.mujoco import MujocoQuadForceEnv
+from gym_reinmav.envs.mujoco import MujocoQuadEnv
 
 
 class Trajectory:
