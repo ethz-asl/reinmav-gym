@@ -5,15 +5,21 @@ openai gym environment for reinforcement quadrotor
 
 # Requirements
 
-python3.6 (or above), vpython and baseline.
+- python3.6 (or 3.7) environment by one of the following 
+    - system python 
+    - conda 
+    - virtualenv  
+    - venv 
+- gym 
+- vpython
+- baselines
 
-Code was tested on Ubuntu 16.04, 18.04 and macOS.
+Note that the code was tested on Ubuntu 16.04, 18.04 and macOS; but matplotlib has an issue in [macOS conda or virtualenv](https://matplotlib.org/faq/osx_framework.html).
 
-## for mujoco env 
+## for mujoco env (optional)
 
-- conda (strongly recommended)
-- gym with every environment
 - mujoco 1.5
+- mujoco-py
 
 1. put mjpro150 directory into ~/.mujoco
 2. put mjkey.txt into ~/.mujoco
@@ -28,8 +34,10 @@ $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia-410
 5. install gym by pip3 install 'gym[all]'
 
 # Installation
-(venv) Username@reinmav-gym $ pip install -e .
 
+```sh
+$ pip install -e .
+```
 
 ## Check installation
 pip list
