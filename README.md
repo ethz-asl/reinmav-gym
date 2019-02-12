@@ -4,7 +4,10 @@
 openai gym environment for reinforcement quadrotor
 
 # Requirements
-python3.6 (or above), vpython and baseline
+
+python3.6 (or above), vpython and baseline.
+
+Code was tested on Ubuntu 16.04, 18.04 and macOS.
 
 ## for mujoco env 
 

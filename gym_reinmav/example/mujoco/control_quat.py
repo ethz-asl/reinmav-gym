@@ -118,7 +118,7 @@ def main():
     # TODO no hardcoding!
     dt = 0.01
     R = 0.5  # trajectory radius
-    w = 0.1  # trajectory angular speed (rad/s)
+    w = 1.0  # trajectory angular speed (rad/s)
 
     ref_z = 1.0
 
@@ -134,11 +134,11 @@ def main():
     for t in range(10000):
         env.render()
 
-        # quat.ref_pos = np.array([
-        #     R * np.cos(w * dt * t),
-        #     R * np.sin(w * dt * t),
-        #     ref_z
-        # ])
+        quat.ref_pos = np.array([
+            R * np.cos(w * dt * t),
+            R * np.sin(w * dt * t),
+            ref_z
+        ])
 
         action = control(quat=quat)
         observation, reward, done, info = env.step(action)
