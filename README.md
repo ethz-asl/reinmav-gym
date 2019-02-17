@@ -13,8 +13,9 @@ openai gym environment for reinforcement quadrotor
 - gym 
 - vpython
 - baselines
+- matplotlib
 
-Note that the code was tested on Ubuntu 16.04, 18.04 and macOS; but matplotlib has an issue in [macOS conda or virtualenv](https://matplotlib.org/faq/osx_framework.html).
+Note that the code was tested on Ubuntu 16.04, 18.04 and macOS; but matplotlib has some issues in macOS. Please see [this doc](https://matplotlib.org/faq/osx_framework.html) for more details: we strongly recommend to use conda + pythonw (```conda install python.app```) on macOS.
 
 ## for mujoco env (optional)
 

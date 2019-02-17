@@ -42,3 +42,11 @@ class MujocoQuadEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         v = self.viewer
         v.cam.trackbodyid = 0
         v.cam.distance = self.model.stat.extent * 10
+
+    @property
+    def mass(self):
+        return self.model.body_mass[1]
+
+    @property
+    def gravity(self):
+        return self.model.opt.gravity

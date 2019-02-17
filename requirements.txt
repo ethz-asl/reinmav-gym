@@ -1,3 +1,6 @@
 mujoco-py==1.50.1.68
 pyquaternion>0.9
+baselines
+gym
 vpython
+matplotlib
