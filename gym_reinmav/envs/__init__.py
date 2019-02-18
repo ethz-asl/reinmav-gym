@@ -1,10 +1,29 @@
 from gym.envs.registration import register
 
-from gym_reinmav.envs.reinmav_env import ReinmavEnv
-from gym_reinmav.envs.quadrotor2d import Quadrotor2D
-from gym_reinmav.envs.quadrotor2d_slungload import Quadrotor2DSlungload
-from gym_reinmav.envs.quadrotor3d import Quadrotor3D
-from gym_reinmav.envs.quadrotor3d_slungload import Quadrotor3DSlungload
+register(
+    id='reinmav-v0',
+    entry_point='gym_reinmav.envs:ReinmavEnv',
+)
+
+register(
+	id='quadrotor2d-v0',
+	entry_point='gym_reinmav.envs:Quadrotor2D',
+)
+
+register(
+	id='quadrotor2d-slungload-v0',
+	entry_point='gym_reinmav.envs:Quadrotor2DSlungload',
+)
+
+register(
+	id='quadrotor3d-v0',
+	entry_point='gym_reinmav.envs:Quadrotor3D',
+)
+
+register(
+	id='quadrotor3d-slungload-v0',
+	entry_point='gym_reinmav.envs:Quadrotor3DSlungload',
+)
 
 register(
     id='MujocoQuadForce-v0',
