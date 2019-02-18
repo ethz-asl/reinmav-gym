@@ -26,6 +26,11 @@ register(
 )
 
 register(
+	id='fixedwing3d-soaring-v0',
+	entry_point='gym_reinmav.envs:Fixedwing3DSoaring',
+)
+
+register(
     id='MujocoQuadForce-v0',
     entry_point='gym_reinmav.envs.mujoco:MujocoQuadEnv',
 )
