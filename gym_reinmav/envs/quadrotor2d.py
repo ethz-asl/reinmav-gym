@@ -44,13 +44,16 @@ class Quadrotor2D(gym.Env):
 		self.x_range = 1.0
 		self.steps_beyond_done = None
 
-		self.max_thrust = 3.5316 # in N
+		self.max_thrust = 15 # in N
 		self.min_thrust = 0.0
-		self.max_torque = 1.0 #??
+		self.max_torque = 5.0 #??
 		self.min_torque = -self.max_torque
-		self.min_action = np.array([self.min_torque, self.min_thrust])
-		self.max_action = np.array([self.max_torque, self.max_thrust])
-		self.limit_state = np.array([10,10,np.deg2rad(80),5,5]) #x,z,att,vx,vz 
+		#self.min_action = np.array([self.min_torque, self.min_thrust])
+		#self.max_action = np.array([self.max_torque, self.max_thrust])
+		self.min_action = np.array([self.min_thrust, self.min_torque])
+		self.max_action = np.array([self.max_thrust, self.max_torque])
+		
+		self.limit_state = np.array([5,5,np.deg2rad(60),3,3]) #x,z,att,vx,vz 
 
 		self.action_space = spaces.Box(low=self.min_action, high=self.max_action, dtype=np.float32)
 		self.observation_space = spaces.Box(low=-self.limit_state, high=self.limit_state, dtype=np.float32)
@@ -60,8 +63,13 @@ class Quadrotor2D(gym.Env):
 		return [seed]
 
 	def step(self, action):
-		thrust = action[0] # Thrust command
-		w = action[1] # Angular velocity command
+		clipped_action=np.clip(action,self.min_action,self.max_action)
+		thrust = clipped_action[0] # Thrust command
+		w = clipped_action[1] # Angular velocity command
+		#thrust = action[0]
+		#w = action[1]
+		print("thrust=",thrust)
+		print("omega=",w)
 
 		state = self.state
 		ref_pos = self.ref_pos
@@ -76,32 +84,44 @@ class Quadrotor2D(gym.Env):
 		vel = vel + acc * self.dt
 		att = att + w * self.dt
 
-		self.state = (pos[0], pos[1], att, vel[0], vel[1])
+		#self.state = (pos[0], pos[1], att, vel[0], vel[1])
+		#print("pos[0]=",type(pos[0]))
+		#self.state = (pos[0], pos[1], np.float64(att), vel[0], vel[1])
+		
+		tempState = np.array([pos[0], pos[1], np.float64(att), vel[0], vel[1]])
+		self.state=np.clip(tempState,-self.limit_state,self.limit_state)
+		print("state=",self.state)
 
-		done =  linalg.norm(pos, 2) < -self.pos_threshold \
-			and  linalg.norm(pos, 2) > self.pos_threshold \
-			and linalg.norm(vel, 2) < -self.vel_threshold \
-			and linalg.norm(vel, 2) > self.vel_threshold
-		done = bool(done)
+		reward = (-linalg.norm(pos, 2))
+		print("reward=",reward)
+		# done =  linalg.norm(pos, 2) < -self.pos_threshold \
+		# 	and  linalg.norm(pos, 2) > self.pos_threshold \
+		# 	and linalg.norm(vel, 2) < -self.vel_threshold \
+		# 	and linalg.norm(vel, 2) > self.vel_threshold
+		# done = bool(done)
 
-		if not done:
-		    reward = (-linalg.norm(pos, 2))
-		elif self.steps_beyond_done is None:
-		    # Pole just fell!
-		    self.steps_beyond_done = 0
-		    reward = 1.0
-		else:
-		    if self.steps_beyond_done == 0:
-		        logger.warn("You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.")
-		    self.steps_beyond_done += 1
-		    reward = 0.0
+		# if not done:
+		#     reward = (-linalg.norm(pos, 2))
+		# elif self.steps_beyond_done is None:
+		#     # Pole just fell!
+		#     self.steps_beyond_done = 0
+		#     reward = 1.0
+		# else:
+		#     if self.steps_beyond_done == 0:
+		#         logger.warn("You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.")
+		#     self.steps_beyond_done += 1
+		#     reward = 0.0
 
-		return np.array(self.state), reward, done, {}
+
+		#print("state=",np.array(self.state))
+		#return np.array(self.state), reward, done, {}
+		return self.state, reward, False, {}
 
 	def control(self):
 		Kp = -5.0
 		Kv = -4.0
 		tau = 0.1
+		print("self.state=",self.state)
 		state = self.state
 		ref_pos = self.ref_pos
 		ref_vel = self.ref_vel
@@ -125,7 +145,11 @@ class Quadrotor2D(gym.Env):
 
 	def reset(self):
 		print("reset")
-		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(5,)))
+		#self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(5,)))
+		limit=np.array([0.5,0.5,np.deg2rad(30),0.05,0.05])
+
+		self.state = np.array(self.np_random.uniform(low=-limit, high=limit, size=(5,)))
+		
 		return np.array(self.state)
 
 	def render(self, mode='human', close=False):
