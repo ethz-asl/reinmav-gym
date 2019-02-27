@@ -21,19 +21,36 @@ except ImportError:
 
 DEFAULT_NET = 'mlp'
 
+#=========================
+#   Example command lines
+#=========================
+
+#Trining
+#python ./train_hovering.py --save_path=~/workspace/myGym/models/quadhover-ppo2-20M --num_timesteps=2e7 --num_env=4 --play False
+
+#Playing
+#python ./train_hovering.py --load_path=~/workspace/myGym/models/quadhover-ppo2-20M --num_timesteps=0 --play True
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--num_timesteps', type=int, required=False, default=2e7, help='the number of timestep')
+    parser.add_argument('--num_timesteps', type=float, required=False, default=2e7, help='the number of timestep')
     parser.add_argument('--seed', type=int, required=False, help='random seed')
     parser.add_argument('--network', type=str, required=False, default='mlp', help='network type')
     parser.add_argument('--alg', type=str, required=False, default='ppo2', help='algorithm type')
-    parser.add_argument('--save_video_interval', type=int, required=False, default=0, help='video interval')
-    parser.add_argument('--save_video_length', type=int, required=False, default=0, help='video length')
+    parser.add_argument('--save_video_interval', type=int, required=False, default=0, help='Save video every x steps (0 = disabled)')
+    parser.add_argument('--save_video_length', type=int, required=False, default=10, help='Length of recorded video. Default 10s')
     parser.add_argument('--num_env', type=int, required=False, default=1, help='number of environment')
     parser.add_argument('--reward_scale', type=float, required=False, default=1., help='reward scale')
+    parser.add_argument('--save_path', type=str, required=False, default=None, help='Path to save trained model to')
+    parser.add_argument('--load_path', type=str, required=False, default=None, help='Path to load trained model from')
+    parser.add_argument('--play', required=False, default=False, help='testing trained model')
 
+    parser.add_argument('--nminibatches', type=int, required=False, default=4, help='number of training minibatches per update')
+    parser.add_argument('--noptepochs', type=int, required=False, default=4, help='number of training epochs per update')
+    parser.add_argument('--num_hidden', type=int, required=False, default=32, help='number of hidden units')
+    parser.add_argument('--num_layers', type=int, required=False, default=4, help='number of layers')
+    #There are more parameters that we can set (e.g., activation and learning rate). Please have a look baselines/ppo2/ppo2.py and baselines/common/models.py
     return parser.parse_args()
 
 
@@ -66,6 +83,10 @@ def get_learn_function_defaults(alg, env_type='mujoco'):
 def train(args):
     total_timesteps = int(args.num_timesteps)
     seed = args.seed
+    if args.load_path is not None:
+        load_path = os.path.expanduser(args.load_path)
+    else:
+        load_path = None
 
     learn = get_learn_function(args.alg)
     alg_kwargs = get_learn_function_defaults(args.alg)
@@ -79,9 +100,11 @@ def train(args):
 
     if args.network:
         alg_kwargs['network'] = args.network
+        alg_kwargs['num_hidden'] = args.num_hidden
+        alg_kwargs['num_layers'] = args.num_layers
     else:
         if alg_kwargs.get('network') is None:
-            alg_kwargs['network'] = DEFAULT_NET
+            alg_kwargs['network'] = args.network
 
     print('Training {} on {} with arguments \n{}'.format(args.alg, 'Anymal', alg_kwargs))
 
@@ -89,7 +112,8 @@ def train(args):
         env=env,
         seed=seed,
         total_timesteps=total_timesteps,
-        **alg_kwargs
+        **alg_kwargs,
+        load_path=load_path
     )
 
     return model, env
@@ -124,7 +148,6 @@ def build_env(args):
 
 
 def main():
-
     # tensorboard log
     logdir = os.path.join(os.path.curdir, 'log', 'mujoco')
     logformat = ['tensorboard', 'stdout', 'log']
@@ -137,7 +160,6 @@ def main():
     else:
         logger.configure(dir=logdir, format_strs=[])
         rank = MPI.COMM_WORLD.Get_rank()
-
     model, env = train(args)
     env.close()
 
