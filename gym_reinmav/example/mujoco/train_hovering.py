@@ -48,8 +48,8 @@ def parse_args():
 
     parser.add_argument('--nminibatches', type=int, required=False, default=4, help='number of training minibatches per update')
     parser.add_argument('--noptepochs', type=int, required=False, default=4, help='number of training epochs per update')
-    parser.add_argument('--num_hidden', type=int, required=False, default=32, help='number of hidden units')
-    parser.add_argument('--num_layers', type=int, required=False, default=4, help='number of layers')
+    parser.add_argument('--num_hidden', type=int, required=False, default=64, help='number of hidden units')
+    parser.add_argument('--num_layers', type=int, required=False, default=2, help='number of layers')
     #There are more parameters that we can set (e.g., activation and learning rate). Please have a look baselines/ppo2/ppo2.py and baselines/common/models.py
     return parser.parse_args()
 
