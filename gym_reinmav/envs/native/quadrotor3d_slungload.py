@@ -324,3 +324,7 @@ class Quadrotor3DSlungload(gym.Env):
 		rate(100)
 
 		return True
+
+	def close(self):
+		if self.viewer:
+			self.viewer = None

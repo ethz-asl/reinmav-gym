@@ -26,7 +26,7 @@ class Quadrotor2DSlungload(gym.Env):
 	metadata = {'render.modes': ['human']}
 	def __init__(self):
 		self.mass = 1.0
-		self.load_mass = 0.1;
+		self.load_mass = 0.1
 		self.dt = 0.01
 		self.g = np.array([0.0, -9.8])
 
@@ -42,7 +42,6 @@ class Quadrotor2DSlungload(gym.Env):
 		self.vel_threshold = 0.1
 
 
-		self.seed()
 		self.viewer = None
 		self.quadtrans = None
 		self.loadtrans = None
@@ -50,6 +49,12 @@ class Quadrotor2DSlungload(gym.Env):
 		self.x_range = 1.0
 		self.steps_beyond_done = None
 
+		self.action_space = spaces.Box(low=self.min_action, high=self.max_action,
+                                       shape=(2,), dtype=np.float32)
+		self.observation_space = spaces.Box(low=self.low_state, high=self.high_state,
+                                        shape=(9,), dtype=np.float32)
+		self.seed()
+		self.reset()
 
 	def seed(self, seed=None):
 		self.np_random, seed = seeding.np_random(seed)
@@ -69,7 +74,7 @@ class Quadrotor2DSlungload(gym.Env):
 		load_pos = np.array([state[5], state[6]]).flatten()
 		load_vel = np.array([state[7], state[8]]).flatten()
 
-		tether_vec = load_pos - pos;
+		tether_vec = load_pos - pos
 		unit_tether_vec = tether_vec / linalg.norm(tether_vec)
 
 		if linalg.norm(tether_vec) >= self.tether_length :
@@ -81,7 +86,7 @@ class Quadrotor2DSlungload(gym.Env):
 
 			T = self.load_mass * linalg.norm(-self.g + load_acceleration) * unit_tether_vec
 
-			slack = False;
+			slack = False
 
 			# Quadrotor dynamics
 			acc = thrust/self.mass  * np.array([cos(att + pi/2), sin(att + pi/2)]) + self.g + T/self.mass
@@ -135,7 +140,7 @@ class Quadrotor2DSlungload(gym.Env):
 	def control(self):
 		Kp = -5.0
 		Kv = -4.0
-		tau = 0.1;
+		tau = 0.1
 
 
 		state = self.state
@@ -151,11 +156,11 @@ class Quadrotor2DSlungload(gym.Env):
 		error_pos = pos - self.ref_pos
 		error_vel = vel - self.ref_vel
 		# %% Calculate desired acceleration
-		desired_acc = Kp * error_pos + Kv * error_vel + [0.0, 9.8];
-		desired_att = atan2(desired_acc[1], desired_acc[0]) - pi/2;
-		error_att = att - desired_att;
-		w = (-1/tau) * error_att;
-		thrust = self.mass * linalg.norm(desired_acc, 2);
+		desired_acc = Kp * error_pos + Kv * error_vel + [0.0, 9.8]
+		desired_att = atan2(desired_acc[1], desired_acc[0]) - pi/2
+		error_att = att - desired_att
+		w = (-1/tau) * error_att
+		thrust = self.mass * linalg.norm(desired_acc, 2)
 
 		action = np.array([thrust, w])
 
@@ -163,7 +168,7 @@ class Quadrotor2DSlungload(gym.Env):
 
 	def reset(self):
 		print("reset")
-		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(9,1)))
+		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(9,)))
 		return np.array(self.state)
 
 	def render(self, mode='human', close=False):
@@ -232,3 +237,8 @@ class Quadrotor2DSlungload(gym.Env):
 		self.reftrans.set_translation(ref_x, ref_y)
 
 		return self.viewer.render(return_rgb_array = mode=='rgb_array')
+
+	def close(self):
+		if self.viewer:
+			self.viewer.close()
+			self.viewer = None
