@@ -78,29 +78,18 @@ def build_env(args):
     seed = args.seed
 
     env_type, env_id = get_env_type(args)
+    
+    config = tf.ConfigProto(allow_soft_placement=True,
+                            intra_op_parallelism_threads=1,
+                            inter_op_parallelism_threads=1)
+    config.gpu_options.allow_growth = True
+    get_session(config=config)
 
-    if env_type in {'atari', 'retro'}:
-        if alg == 'deepq':
-            env = make_env(env_id, env_type, seed=seed, wrapper_kwargs={'frame_stack': True})
-        elif alg == 'trpo_mpi':
-            env = make_env(env_id, env_type, seed=seed)
-        else:
-            frame_stack_size = 4
-            env = make_vec_env(env_id, env_type, nenv, seed, gamestate=args.gamestate, reward_scale=args.reward_scale)
-            env = VecFrameStack(env, frame_stack_size)
+    flatten_dict_observations = alg not in {'her'}
+    env = make_vec_env(env_id, env_type, args.num_env or 1, seed, reward_scale=args.reward_scale, flatten_dict_observations=flatten_dict_observations)
 
-    else:
-        config = tf.ConfigProto(allow_soft_placement=True,
-                               intra_op_parallelism_threads=1,
-                               inter_op_parallelism_threads=1)
-        config.gpu_options.allow_growth = True
-        get_session(config=config)
-
-        flatten_dict_observations = alg not in {'her'}
-        env = make_vec_env(env_id, env_type, args.num_env or 1, seed, reward_scale=args.reward_scale, flatten_dict_observations=flatten_dict_observations)
-
-        if env_type == 'mujoco':
-            env = VecNormalize(env)
+    if env_type == 'mujoco':
+        env = VecNormalize(env)
 
     return env
 
@@ -131,10 +120,7 @@ def get_env_type(args):
 
 
 def get_default_network(env_type):
-    if env_type in {'atari', 'retro'}:
-        return 'cnn'
-    else:
-        return 'mlp'
+    return 'mlp'
 
 def get_alg_module(alg, submodule=None):
     submodule = submodule or alg
