@@ -39,7 +39,6 @@ class Quadrotor3D(gym.Env):
 		self.pos_threshold = 0.1
 		self.vel_threshold = 0.1
 
-		self.seed()
 		self.viewer = None
 		self.render_quad1 = None
 		self.render_quad2 = None
@@ -50,6 +49,13 @@ class Quadrotor3D(gym.Env):
 		self.render_velocity = None
 		self.render_ref = None
 		self.x_range = 1.0
+
+		self.action_space = spaces.Box(low=0.0, high=10.0, dtype=np.float, shape=(4,))
+		self.observation_space = spaces.Box(low=-10.0, high=10.0, dtype=np.float, shape=(10,))
+		
+		self.seed()
+		self.reset()
+
 
 	def seed(self, seed=None):
 		self.np_random, seed = seeding.np_random(seed)
@@ -94,7 +100,7 @@ class Quadrotor3D(gym.Env):
 		    reward = 1.0
 		else:
 		    if self.steps_beyond_done == 0:
-		        logger.warn("You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.")
+			    logger.warn("You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.")
 		    self.steps_beyond_done += 1
 		    reward = 0.0
 
@@ -119,7 +125,7 @@ class Quadrotor3D(gym.Env):
 
 		Kp = np.array([-5.0, -5.0, -5.0])
 		Kv = np.array([-4.0, -4.0, -4.0])
-		tau = 0.3;
+		tau = 0.3
 
 		state = self.state
 		ref_pos = self.ref_pos
@@ -158,7 +164,7 @@ class Quadrotor3D(gym.Env):
 
 	def reset(self):
 		print("reset")
-		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(10,1)))
+		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(10,)))
 		return np.array(self.state)
 
 	def render(self, mode='human', close=False):
@@ -282,3 +288,7 @@ class Quadrotor3D(gym.Env):
 		rate(100)
 
 		return True
+
+	def close(self):
+		if self.viewer:
+			self.viewer = None

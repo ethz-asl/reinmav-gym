@@ -37,12 +37,18 @@ class Quadrotor2D(gym.Env):
 		self.pos_threshold = 0.1
 		self.vel_threshold = 0.1
 
-		self.seed()
 		self.viewer = None
 		self.quadtrans = None
 		self.reftrans = None
 		self.x_range = 1.0
 		self.steps_beyond_done = None
+
+		self.action_space = spaces.Box(low=-10.0, high=10.0,
+                                       shape=(2,), dtype=np.float32)
+		self.observation_space = spaces.Box(low=-10.0, high=10.0,
+                                        shape=(5,), dtype=np.float32)
+		self.seed()
+		self.reset()
 
 
 	def seed(self, seed=None):
@@ -115,7 +121,7 @@ class Quadrotor2D(gym.Env):
 
 	def reset(self):
 		print("reset")
-		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(5,1)))
+		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(5,)))
 		return np.array(self.state)
 
 	def render(self, mode='human', close=False):
@@ -160,3 +166,8 @@ class Quadrotor2D(gym.Env):
 		self.reftrans.set_translation(ref_x, ref_y)
 
 		return self.viewer.render(return_rgb_array = mode=='rgb_array')
+	
+	def close(self):
+		if self.viewer:
+			self.viewer.close()
+			self.viewer = None
