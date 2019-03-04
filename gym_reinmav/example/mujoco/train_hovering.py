@@ -12,7 +12,6 @@ from importlib import import_module
 from autolab_core import YamlConfig
 
 from gym_reinmav.envs.mujoco import MujocoQuadHoveringEnv
-from gym_reinmav.envs.mujoco import MujocoQuadQuaternionEnv
 
 try:
     from mpi4py import MPI
@@ -27,16 +26,15 @@ DEFAULT_NET = 'mlp'
 #=========================
 
 #Trining
-#python ./train_hovering.py --save_path=~/workspace/myGym/models/quadhover-ppo2-20M --num_timesteps=20e6 --num_env=4 --play=False --env=MujocoQuadQuat-v0
+#python ./train_hovering.py --save_path=~/workspace/myGym/models/quadhover-ppo2-20M --num_timesteps=2e7 --num_env=4 --play False
 
 #Playing
-#python ./train_hovering.py --load_path=~/workspace/myGym/models/quadhover-ppo2-20M --num_timesteps=0 --env=MujocoQuadQuat-v0 --play=True
+#python ./train_hovering.py --load_path=~/workspace/myGym/models/quadhover-ppo2-20M --num_timesteps=0 --play True
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--num_timesteps', type=float, required=False, default=2e7, help='the number of timestep')
-    parser.add_argument('--env', type=str, required=True, default='MujocoQuadForce-v1', help='name of environment, available envs are MujocoQuadForce-v0, MujocoQuadForce-v1, MujocoQuadQuat-v0')
     parser.add_argument('--seed', type=int, required=False, help='random seed')
     parser.add_argument('--network', type=str, required=False, default='mlp', help='network type')
     parser.add_argument('--alg', type=str, required=False, default='ppo2', help='algorithm type')
@@ -125,7 +123,6 @@ def build_env(args):
 
     alg = args.alg
     seed = args.seed
-    env_name=args.env
 
     # tf config
     config = tf.ConfigProto(allow_soft_placement=True,
@@ -136,20 +133,12 @@ def build_env(args):
 
     flatten_dict_observations = alg not in {'her'}
 
-    # env = make_vec_env('MujocoQuadForce-v1',
-    #                    'mujoco',
-    #                    args.num_env or 1,
-    #                    seed,
-    #                    reward_scale=args.reward_scale,
-    #                    flatten_dict_observations=flatten_dict_observations)
-    #MujocoQuadQuat-v0 or MujocoQuadForce-v1
-    env = make_vec_env(env_name,
+    env = make_vec_env('MujocoQuadForce-v1',
                        'mujoco',
                        args.num_env or 1,
                        seed,
                        reward_scale=args.reward_scale,
                        flatten_dict_observations=flatten_dict_observations)
-
     # env = ActionClipWrapper(env)
 
     # if env_type == 'mujoco':
