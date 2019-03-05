@@ -2,7 +2,7 @@ import argparse
 import os
 import tensorflow as tf
 import numpy as np
-
+import distutils
 from baselines.common.tf_util import get_session
 from baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
@@ -156,7 +156,7 @@ def main():
     logformat = ['tensorboard', 'stdout', 'log']
 
     args = parse_args()
-
+    args.play = distutils.util.strtobool(args.play)
     if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:
         rank = 0
         logger.configure(dir=logdir, format_strs=logformat)

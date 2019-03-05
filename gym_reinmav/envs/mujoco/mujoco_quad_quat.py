@@ -26,48 +26,38 @@ class MujocoQuadQuaternionEnv(MujocoQuadEnv):
         ang_vel= ob[10:13]
         lin_acc = ob[13:16]
         ang_acc = ob[16:]
-        # print("ob=",ob)
-        # print("action=",a)
-        # print("pos=",pos)
-        # print("vel=",vel)
-        # print("ang_vel=",ang_vel)
-        # print("quat=",quat)
-        dist_goal=linalg.norm(goal_pos,2)
-        cost  = ( (linalg.norm(pos-goal_pos)+dist_goal)* 4*1e-3 \
-        		 +linalg.norm(ang_vel)* 3*1e-4 \
-        		 +linalg.norm(lin_vel)* 5*1e-4 \
-        		 +linalg.norm(lin_acc)* 2*1e-4 \
-        		 +linalg.norm(ang_acc)* 4*1e-5 )
-        reward = -cost
 
-        done = not (np.isfinite(ob).all() and \
-        	   abs(pos[2]) > 0.3 and \
-        	   abs(pos[0]) < 2.0 and \
-        	   abs(pos[1]) < 2.0)
-        done = bool(done)
+        # dist_goal=linalg.norm(goal_pos,2)
+        # cost  = ( linalg.norm(pos-goal_pos)* 4*1e-3 \
+        # 		 +linalg.norm(ang_vel)* 3*1e-4 \
+        # 		 +linalg.norm(lin_vel)* 5*1e-4 \
+        # 		 +linalg.norm(lin_acc)* 2*1e-4 \
+        # 		 +linalg.norm(ang_acc)* 4*1e-5 )
+        # reward = -cost
 
-        if not done:
-        	reward+=alive_bonus
-        else:
-        	reward+=terminated_penalty
+        # done = not (np.isfinite(ob).all() and \
+        # 	   abs(pos[2]) > 0.3 and \
+        # 	   abs(pos[0]) < 2.0 and \
+        # 	   abs(pos[1]) < 2.0)
+        # done = bool(done)
+
 
         #=========================
         # reward from quad hover
         #=========================
 
-        # alive_bonus = 100
-        # reward = - np.sum(np.square(ob[0:3] - np.array([0.0, 0, 1.0]))) * 10 \
-        #          - np.sum(np.square(ob[7:13] - np.zeros(6))) * 0.1 \
-        #          - np.sum(np.square(a)) \
-        #          + np.sum(a) * 0.1 \
-        #          + alive_bonus
+        alive_bonus = 100
+        reward = - np.sum(np.square(ob[0:3] - np.array([0.0, 0, 1.0]))) * 10 \
+                 - np.sum(np.square(ob[7:13] - np.zeros(6))) * 0.1 \
+                 - np.sum(np.square(ob[13:] - np.zeros(6))) * 0.01\
+                 - np.sum(np.square(a)) \
+                 + np.sum(a) * 0.1 \
+                 + alive_bonus
 
-        # notdone = np.isfinite(ob).all() \
-        #           and ob[2] > 0.3 \
-        #           and abs(ob[0]) < 2.0 \
-        #           and abs(ob[1]) < 2.0
-        # done = not notdone
-        
-        # done = not notdone
+        notdone = np.isfinite(ob).all() \
+                  and ob[2] > 0.3 \
+                  and abs(ob[0]) < 2.0 \
+                  and abs(ob[1]) < 2.0
+        done = not notdone
         #if done=True indicates the episode has terminated and it's time to reset the environment. (For example, perhaps the pole tipped too far, or you lost your last life.) https://gym.openai.com/docs/
         return ob, reward, done, {}

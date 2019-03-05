@@ -36,7 +36,8 @@ class MujocoQuadEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return self._get_obs()
 
     def _get_obs(self):
-        return np.concatenate([self.sim.data.qpos, self.sim.data.qvel, self.sim.data.qacc]).ravel()
+        #return np.concatenate([self.sim.data.qpos, self.sim.data.qvel]).ravel() #13 state
+        return np.concatenate([self.sim.data.qpos, self.sim.data.qvel, self.sim.data.qacc]).ravel() #19 state
 
     def viewer_setup(self):
         v = self.viewer
