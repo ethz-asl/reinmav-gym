@@ -81,9 +81,16 @@ Requires: gym
 Required-by: 
 ```
 
-# Testing
-Executing the following command should generate 4 plots (3D position, 1D position, velocity and yaw plots).
+# Using the Environment
+The environment can be used as anyother gym environments. This can be done by doing the following in your script
+```
+import gym
+...
 
-``` $python ./test/test_reinmav.py ```
-
-![3D plot](http://drive.google.com/uc?export=view&id=1tiTP0UBm1NjB1Wpm53m2ThZQsTZ8N9cy)
+env = gym.make('quadrotor3d-v0').unwrapped
+```
+'quadrotor3d-v0` is the environment ID that is registered in the gym environment. The list of environment ids in this repo can be found in `gym_reinmav/__init__.py' file.
+The environment can be also be tested using the openai baselines package, for example as the following.
+```
+python -m gym_reinmav.run --alg=ppo2 --env=quadrotor3d-v0 --network=mlp --num_timesteps=2e7
+```
