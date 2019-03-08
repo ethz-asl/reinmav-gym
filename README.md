@@ -1,7 +1,7 @@
 # reinmav-gym
 `reinmav-gym` is a gym environment for developing mav controllers using the openai gym framework. The environment composes of two environment `native` which has a built in simulator and `mujoco` which uses the mujoco simulator to train your drone.
 
-<img src="gym_reinmav/resources/native_slungload.gif" width="400" /> <img src="gym_reinmav/resources/mujoco_quad.gif" width="400" />
+<img src="gym_reinmav/resources/native_slungload.gif" width="400" /> <img src="gym_reinmav/resources/reinmav-gym-mujoco.gif" width="400" />
 
 # Installation
 ## Requirements
