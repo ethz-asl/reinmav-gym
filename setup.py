@@ -2,6 +2,7 @@ from setuptools import setup
 
 extras={
     'mujoco':['mujoco_py>=1.50', 'imageio'],
+    'baselines'
 }
 
 # dependency
@@ -18,7 +19,6 @@ setup(name='gym_reinmav',
           'vpython',
           'pyquaternion',
           'matplotlib',
-          'baselines',
       ],
       extras_require=extras,
       )
