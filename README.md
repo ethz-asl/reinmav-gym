@@ -36,14 +36,14 @@ $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia-410
 5. install gym by pip3 install 'gym[all]'
 
 ## Install Dependencies
-Install the gym environment. The installation guidelines can be found [here](https://gym.openai.com/docs/)
+- Install the gym environment. The installation guidelines can be found [here](https://gym.openai.com/docs/)
 ```
 git clone https://github.com/openai/gym
 cd gym
 pip install -e .
 ```
 
-[Optional] Install the baseline repository to use baseline algorithms to train the models
+- [Optional] Install the baseline repository to use baseline algorithms to train the models
 ```
 sudo apt-get update && sudo apt-get install cmake libopenmpi-dev python3-dev zlib1g-dev
 git clone https://github.com/openai/baselines.git
@@ -58,7 +58,7 @@ pip install -e .
 git clone https://github.com/ethz-asl/reinmav-gym.git
 cd reinmav-gym
 ```
-The environment is tested on python 3.6. Make sure you have the right python version when i
+- The environment is tested on python 3.6. Make sure you have the right python version when i
 ```
 pip install -e .
 ```
