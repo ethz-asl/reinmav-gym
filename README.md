@@ -1,18 +1,19 @@
-# Assuming that you already installed openai gym (https://github.com/openai/gym)
-
 # reinmav-gym
-openai gym environment for reinforcement quadrotor
+`reinmav-gym` is a gym environment for developing mav controllers using the openai gym framework. The environment composes of two environment `native` which has a built in simulator and `mujoco` which uses the mujoco simulator to train your drone.
 
-# Requirements
+<img src="gym_reinmav/resources/native_slungload.gif" width="400" /> <img src="gym_reinmav/resources/mujoco_quad.gif" width="400" />
+
+# Installation
+## Requirements
 
 - python3.6 (or 3.7) environment by one of the following 
     - system python 
     - conda 
     - virtualenv  
     - venv 
-- gym 
+- [gym](https://github.com/openai/gym.git) 
 - vpython
-- baselines
+- [baselines](https://github.com/openai/baselines.git)
 - matplotlib
 
 Note that the code was tested on Ubuntu 16.04, 18.04 and macOS; but matplotlib has some issues in macOS. Please see [this doc](https://matplotlib.org/faq/osx_framework.html) for more details: we strongly recommend to use conda + pythonw (```conda install python.app```) on macOS.
@@ -34,18 +35,17 @@ $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia-410
 ```
 5. install gym by pip3 install 'gym[all]'
 
-# Installation
-
-```sh
-$ pip install -e .
+## Installing the package
+The package can be installed simply by executing the following command. 
+```
+cd <path-to-reinmav-gym>
+pip install -e .
 ```
 
 ## Check installation
-pip list
-
+You can check your installation using `pip show`
+```
 pip show gym-reinmav
-
-``` pip show gym-reinmav
 Name: gym-reinmav
 Version: 0.0.1
 Summary: UNKNOWN
@@ -64,21 +64,3 @@ Executing the following command should generate 4 plots (3D position, 1D positio
 ``` $python ./test/test_reinmav.py ```
 
 ![3D plot](http://drive.google.com/uc?export=view&id=1tiTP0UBm1NjB1Wpm53m2ThZQsTZ8N9cy)
-
-
-# openai gym example environments
-* Continuous mountain car: https://github.com/openai/gym/blob/master/gym/envs/classic_control/continuous_mountain_car.py
-* Cart pole: https://github.com/openai/gym/blob/master/gym/envs/classic_control/cartpole.py
-* Pendulum: https://github.com/openai/gym/blob/master/gym/envs/classic_control/pendulum.py
-
-# Integration into openai gym environment
-(if you want to use this reinmav environment with Keras-rl(https://github.com/keras-rl/keras-rl)..)
-1. copy reinmav-gym/gym_reinmav/envs/reinmav_env.py to gym/gym/envs/classic_control/
-2. add ``` from gym.envs.classic_control.reinmav_env import ReinmavEnv ``` to ```gym/gym/envs/classic_control/__init__.py``` @ line 6
-3. add the below to ```gym/gym/envs/__init__.py``` @ line 92-95
-```
-register(
-    id='reinmav-v0',
-    entry_point='gym.envs.classic_control:ReinmavEnv',
-)
-```
