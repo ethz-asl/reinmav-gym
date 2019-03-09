@@ -2,7 +2,6 @@ from setuptools import setup
 
 extras={
     'mujoco':['mujoco_py>=1.50', 'imageio'],
-    'baselines'
 }
 
 # dependency
