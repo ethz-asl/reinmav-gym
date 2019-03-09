@@ -16,7 +16,7 @@
 
 
 import gym
-from gym import error, spaces, utils
+from gym import error, spaces, utils, logger
 from math import cos, sin, pi, atan2
 import numpy as np
 from numpy import linalg
@@ -36,8 +36,8 @@ class Quadrotor3D(gym.Env):
 		self.ref_vel = np.array([0.0, 0.0, 0.0])
 
 		# Conditions to fail the episode
-		self.pos_threshold = 0.1
-		self.vel_threshold = 0.1
+		self.pos_threshold = 3.0
+		self.vel_threshold = 10.0
 
 		self.viewer = None
 		self.render_quad1 = None
@@ -49,6 +49,7 @@ class Quadrotor3D(gym.Env):
 		self.render_velocity = None
 		self.render_ref = None
 		self.x_range = 1.0
+		self.steps_beyond_done = None
 
 		self.action_space = spaces.Box(low=0.0, high=10.0, dtype=np.float, shape=(4,))
 		self.observation_space = spaces.Box(low=-10.0, high=10.0, dtype=np.float, shape=(10,))
@@ -87,9 +88,9 @@ class Quadrotor3D(gym.Env):
 		self.state = (pos[0], pos[1], pos[2], att[0], att[1], att[2], att[3], vel[0], vel[1], vel[2])
 
 		done =  linalg.norm(pos, 2) < -self.pos_threshold \
-			and  linalg.norm(pos, 2) > self.pos_threshold \
-			and linalg.norm(vel, 2) < -self.vel_threshold \
-			and linalg.norm(vel, 2) > self.vel_threshold
+			or  linalg.norm(pos, 2) > self.pos_threshold \
+			or linalg.norm(vel, 2) < -self.vel_threshold \
+			or linalg.norm(vel, 2) > self.vel_threshold
 		done = bool(done)
 
 		if not done:
