@@ -16,7 +16,7 @@
 
 
 import gym
-from gym import error, spaces, utils
+from gym import error, spaces, utils, logger
 from math import cos, sin, pi, atan2
 import numpy as np
 from numpy import linalg
@@ -38,8 +38,8 @@ class Quadrotor2DSlungload(gym.Env):
 		self.tether_length = 0.5
 
 		# Conditions to fail the episode
-		self.pos_threshold = 0.1
-		self.vel_threshold = 0.1
+		self.pos_threshold = 2.0
+		self.vel_threshold = 10.0
 
 
 		self.viewer = None
@@ -49,9 +49,9 @@ class Quadrotor2DSlungload(gym.Env):
 		self.x_range = 1.0
 		self.steps_beyond_done = None
 
-		self.action_space = spaces.Box(low=self.min_action, high=self.max_action,
+		self.action_space = spaces.Box(low=-10.0, high=10.0,
                                        shape=(2,), dtype=np.float32)
-		self.observation_space = spaces.Box(low=self.low_state, high=self.high_state,
+		self.observation_space = spaces.Box(low=-10.0, high=10.0,
                                         shape=(9,), dtype=np.float32)
 		self.seed()
 		self.reset()
@@ -118,9 +118,9 @@ class Quadrotor2DSlungload(gym.Env):
 		self.state = (pos[0], pos[1], att, vel[0], vel[1], load_pos[0], load_pos[1], load_vel[0], load_vel[1])
 
 		done =  linalg.norm(load_pos, 2) < -self.pos_threshold \
-			and  linalg.norm(load_pos, 2) > self.pos_threshold \
-			and linalg.norm(load_vel, 2) < -self.vel_threshold \
-			and linalg.norm(load_vel, 2) > self.vel_threshold
+			or  linalg.norm(load_pos, 2) > self.pos_threshold \
+			or linalg.norm(load_vel, 2) < -self.vel_threshold \
+			or linalg.norm(load_vel, 2) > self.vel_threshold
 		done = bool(done)
 
 		if not done:

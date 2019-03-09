@@ -16,7 +16,7 @@
 
 
 import gym
-from gym import error, spaces, utils
+from gym import error, spaces, utils, logger
 from math import cos, sin, pi, atan2
 import numpy as np
 from numpy import linalg
@@ -37,12 +37,11 @@ class Quadrotor3DSlungload(gym.Env):
 		self.ref_vel = np.array([0.0, 0.0, 0.0])
 
 		# Conditions to fail the episode
-		self.pos_threshold = 0.1
-		self.vel_threshold = 0.1
+		self.pos_threshold = 3.0
+		self.vel_threshold = 10.0
 
 		self.tether_length = 1.5
 
-		self.seed()
 		self.viewer = None
 		self.render_quad1 = None
 		self.render_quad2 = None
@@ -55,6 +54,14 @@ class Quadrotor3DSlungload(gym.Env):
 		self.render_load = None
 		self.render_tether = None
 		self.x_range = 1.0
+		self.steps_beyond_done = None
+
+		self.action_space = spaces.Box(low=-10.0, high=10.0,
+                                       shape=(4,), dtype=np.float32)
+		self.observation_space = spaces.Box(low=-10.0, high=10.0,
+                                        shape=(16,), dtype=np.float32)
+		self.seed()
+		self.reset()
 
 	def seed(self, seed=None):
 		self.np_random, seed = seeding.np_random(seed)
@@ -123,14 +130,14 @@ class Quadrotor3DSlungload(gym.Env):
 
 		self.state = (pos[0], pos[1], pos[2], att[0], att[1], att[2], att[3], vel[0], vel[1], vel[2], load_pos[0], load_pos[1], load_pos[2], load_vel[0], load_vel[1], load_vel[2])
 
-		done =  linalg.norm(pos, 2) < -self.pos_threshold \
-			and  linalg.norm(pos, 2) > self.pos_threshold \
-			and linalg.norm(vel, 2) < -self.vel_threshold \
-			and linalg.norm(vel, 2) > self.vel_threshold
+		done =  linalg.norm(load_pos, 2) < -self.pos_threshold \
+			or  linalg.norm(load_pos, 2) > self.pos_threshold \
+			or linalg.norm(vel, 2) < -self.vel_threshold \
+			or linalg.norm(vel, 2) > self.vel_threshold
 		done = bool(done)
 
 		if not done:
-		    reward = (-linalg.norm(pos, 2))
+		    reward = (-linalg.norm(load_pos, 2))
 		elif self.steps_beyond_done is None:
 		    # Pole just fell!
 		    self.steps_beyond_done = 0
@@ -204,7 +211,7 @@ class Quadrotor3DSlungload(gym.Env):
 
 	def reset(self):
 		print("reset")
-		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(16,1)))
+		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(16,)))
 		return np.array(self.state)
 
 	def render(self, mode='human', close=False):
@@ -235,9 +242,9 @@ class Quadrotor3DSlungload(gym.Env):
 			self.render_rotor3 = cylinder(canvas = self.viewer, pos=vector(pos[0],pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
 			self.render_rotor4 = cylinder(canvas = self.viewer, pos=vector(pos[0],pos[1],0), axis=vector(0.01*z_axis[0],0.01*z_axis[1],0.01*z_axis[2]), radius=0.2, color=color.cyan, opacity=0.5)
 			self.render_velocity = pointer = arrow(pos=vector(pos[0],pos[1],0), axis=vector(vel[0],vel[1],vel[2]), shaftwidth=0.05, color=color.green)
-			self.render_ref = sphere(canvas = self.viewer, pos=vector(ref_pos[0], ref_pos[1], ref_pos[2]), radius=0.02, color=color.blue, make_trail = True)
+			self.render_ref = sphere(canvas = self.viewer, pos=vector(ref_pos[0], ref_pos[1], ref_pos[2]), radius=0.02, color=color.blue, make_trail = False)
 			self.render_tether = cylinder(canvas = self.viewer, pos=vector(pos[0],pos[1],0), axis=vector(tether_vec[0],tether_vec[1],tether_vec[2]), radius=0.01, color=color.black)
-			self.render_load = sphere(canvas = self.viewer, pos=vector(load_pos[0], load_pos[1], load_pos[2]), radius=0.1, color=color.red, make_trail = True)
+			self.render_load = sphere(canvas = self.viewer, pos=vector(load_pos[0], load_pos[1], load_pos[2]), radius=0.1, color=color.red, make_trail = False)
 		if self.state is None: return None
 
 		self.render_quad1.pos.x = pos[0]
