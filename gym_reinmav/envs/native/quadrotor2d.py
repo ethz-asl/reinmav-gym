@@ -23,6 +23,32 @@ from numpy import linalg
 from gym.utils import seeding
 
 class Quadrotor2D(gym.Env):
+	"""
+	Description:
+		A Quadrotor model which is free to move in 2 dimensional space. The goal is to stay as close as the reference position
+	Observation: 
+		Type: Box(5)
+		Num	Observation                 			Min         Max
+		0	Quadrotor Error Position x             -3.0         3.0
+		1	Quadrotor Error Position z             -3.0         3.0
+		2	Quadrotor Attitude                 -180 deg        180 deg
+		3	Quadrotor Error Velocity x            -10.0        10.0
+		4	Quadrotor Error Velocity z            -10.0        10.0
+		
+	Actions:
+		Type: Discrete(2)
+		Num	Action
+		0	Thrust
+		1	Body Rate
+		
+	Reward:
+		Reward is the negative of the distance towards the reference
+	Starting State:
+		All observations are assigned a uniform random value in [-3.0..3.0]
+	Episode Termination:
+		The vehicle is outside the bounds of state space
+		The vehicle velocity is outside the bounds of state space
+	"""
 	metadata = {'render.modes': ['human']}
 	def __init__(self):
 		self.mass = 1.0
@@ -63,25 +89,28 @@ class Quadrotor2D(gym.Env):
 		ref_pos = self.ref_pos
 		ref_vel = self.ref_vel
 
-		pos = np.array([state[0], state[1]]).flatten()
+		pos = np.array([state[0], state[1]]).flatten() + ref_pos
 		att = np.array([state[2]]).flatten()
-		vel = np.array([state[3], state[4]]).flatten()
+		vel = np.array([state[3], state[4]]).flatten() + ref_vel
 
 		acc = thrust/self.mass * np.array([cos(att + pi/2), sin(att + pi/2)]) + self.g
 		pos = pos + vel * self.dt + 0.5*acc*self.dt*self.dt
 		vel = vel + acc * self.dt
 		att = att + w * self.dt
 
-		self.state = (pos[0], pos[1], att, vel[0], vel[1])
+		err_pos = pos - ref_pos
+		err_vel = vel - ref_vel
 
-		done =  linalg.norm(pos, 2) < -self.pos_threshold \
-			or  linalg.norm(pos, 2) > self.pos_threshold \
-			or linalg.norm(vel, 2) < -self.vel_threshold \
-			or linalg.norm(vel, 2) > self.vel_threshold
+		self.state = (err_pos[0], err_pos[1], att, err_vel[0], err_vel[1])
+
+		done =  linalg.norm(err_pos, 2) < -self.pos_threshold \
+			or  linalg.norm(err_pos, 2) > self.pos_threshold \
+			or linalg.norm(err_vel, 2) < -self.vel_threshold \
+			or linalg.norm(err_vel, 2) > self.vel_threshold
 		done = bool(done)
 
 		if not done:
-		    reward = (-linalg.norm(pos, 2))
+		    reward = (-linalg.norm(err_pos, 2))
 		elif self.steps_beyond_done is None:
 		    # Pole just fell!
 		    self.steps_beyond_done = 0
