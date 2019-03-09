@@ -80,6 +80,15 @@ Location: /Users/YOUR_INSTALLED_PATH/openai/venv/lib/python3.6/site-packages
 Requires: gym
 Required-by: 
 ```
+A simple geometric controller is implemented to see if the quadrotor can fly properly.
+```
+cd reinmav-gym/test
+python test_quadrotor2d.py
+```
+or 
+```
+python test_quadrotor3d.py
+```
 
 # Using the Environment
 The environment can be used as anyother gym environments. This can be done by doing the following in your script
@@ -92,5 +101,6 @@ env = gym.make('quadrotor3d-v0').unwrapped
 'quadrotor3d-v0` is the environment ID that is registered in the gym environment. The list of environment ids in this repo can be found in `gym_reinmav/__init__.py' file.
 The environment can be also be tested using the openai baselines package, for example as the following.
 ```
-python -m gym_reinmav.run --alg=ppo2 --env=quadrotor3d-v0 --network=mlp --num_timesteps=2e7
+python -m gym_reinmav.run --alg=ppo2 --env=quadrotor2d-v0 --network=mlp --play
 ```
+For basic usages on `baslines`, refer to this [repo](https://github.com/openai/baselines)
