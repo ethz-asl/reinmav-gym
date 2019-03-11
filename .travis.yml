@@ -1,0 +1,11 @@
+nguage: python
+python:
+  - "3.6"
+  - "3.6-dev"  # 3.6 development branch
+# command to install dependencies
+install:
+  - pip install -r requirements.txt
+  - pip install -e .
+# command to run tests
+script:
+  - pytest
