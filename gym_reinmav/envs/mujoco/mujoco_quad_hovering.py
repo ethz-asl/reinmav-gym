@@ -47,4 +47,9 @@ class MujocoQuadHoveringEnv(MujocoQuadEnv):
         #           and abs(ob[1]) < 2.0
 
         done = not notdone
+
+        #If the episode is done, then add some variations to the initial state that will be exploited for the next ep. The low and high bounds empirically set.
+        if done:
+          self.init_qpos[0:3]= goal_pos[0:3]+self.np_random.uniform(size=3, low=-0.05, high=0.05)
+          self.init_qvel[0:3]+= self.np_random.uniform(size=3, low=-0.01, high=0.01)
         return ob, reward, done, {}

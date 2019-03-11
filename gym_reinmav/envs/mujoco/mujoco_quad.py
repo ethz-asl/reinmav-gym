@@ -32,8 +32,6 @@ class MujocoQuadEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def reset_model(self):
         qpos = self.init_qpos
         qvel = self.init_qvel
-        qpos[0:3] += self.np_random.uniform(size=3, low=-0.2, high=0.2)
-        qvel[0:3] += self.np_random.uniform(size=3, low=-0.02, high=0.02)
         self.set_state(qpos, qvel)
         return self._get_obs()
 
