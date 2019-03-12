@@ -10,7 +10,7 @@ matrix:
     dist: xenial
     python: "3.6"
     env: - INSTALL_MUJOCO=false
-    - name: "Mujoco Env Xenial python 3.6"
+  - name: "Mujoco Env Xenial python 3.6"
     dist: xenial
     python: "3.6"
     env: - INSTALL_MUJOCO=true
