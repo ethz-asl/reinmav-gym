@@ -1,11 +1,31 @@
-nguage: python
-python:
-  - "3.6"
-  - "3.6-dev"  # 3.6 development branch
+sudo: required
+cache:
+  - apt
+
+dist: xenial
+language: python
+matrix:
+  include:
+  - name: "Native Env Xenial python 3.6"
+    dist: xenial
+    python: "3.6"
+    env: - INSTALL_MUJOCO=false
+    - name: "Mujoco Env Xenial python 3.6"
+    dist: xenial
+    python: "3.6"
+    env: - INSTALL_MUJOCO=true
+
 # command to install dependencies
+before_install:
+  # Install gym
+  - sudo apt install libopenmpi-dev
+  - git clone https://github.com/openai/gym.git ~/
+  - cd ~/gym
+  - pip install -e .
+
 install:
   - pip install -r requirements.txt
   - pip install -e .
-# command to run tests
+
 script:
   - pytest
