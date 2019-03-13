@@ -21,7 +21,7 @@ class MujocoQuadHoveringEnv(MujocoQuadEnv):
         lin_acc = ob[13:16]
         ang_acc = ob[16:19]
 
-                 #- np.sum(np.square(ob[13:] - np.zeros(6))) * 0.01\
+        #- np.sum(np.square(ob[13:] - np.zeros(6))) * 0.01\
         alive_bonus = 100
 
         reward = - linalg.norm(pos-goal_pos) * 10 \
@@ -34,17 +34,6 @@ class MujocoQuadHoveringEnv(MujocoQuadEnv):
                   and pos[2] > 0.3 \
                   and abs(pos[0]) < 2.0 \
                   and abs(pos[1]) < 2.0
-
-        # reward = - np.sum(np.square(ob[0:3] - np.array([0.0, 0, 1.0]))) * 10 \
-        #          - np.sum(np.square(ob[7:13] - np.zeros(6))) * 0.1 \
-        #          - np.sum(np.square(a)) \
-        #          + np.sum(a) * 0.1 \
-        #          + alive_bonus
-
-        # notdone = np.isfinite(ob).all() \
-        #           and ob[2] > 0.3 \
-        #           and abs(ob[0]) < 2.0 \
-        #           and abs(ob[1]) < 2.0
 
         done = not notdone
 
