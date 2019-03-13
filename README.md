@@ -1,4 +1,6 @@
 # reinmav-gym
+[![Build Status](https://travis-ci.org/ethz-asl/reinmav-gym.png?branch=master)](https://travis-ci.org/ethz-asl/reinmav-gym)
+
 `reinmav-gym` is a gym environment for developing mav controllers using the openai gym framework. The environment composes of two environments: `native` which has a built in simulator and `mujoco` which uses the mujoco simulator.
 - `native` environment has a built in dynamics 2D / 3D model that does not require any additional physics engine.
 - `mujoco` environment has a quadrotor model in the [mujoco](http://www.mujoco.org/) simulator for more complex environments
@@ -40,6 +42,10 @@ $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia-410
 5. install gym by pip3 install 'gym[all]'
 
 ## Install Dependencies
+- Install package dependencies
+```
+sudo apt update && sudo apt install libopenmpi-dev
+```
 - Install the gym environment. The installation guidelines can be found [here](https://gym.openai.com/docs/)
 ```
 git clone https://github.com/openai/gym
@@ -62,8 +68,9 @@ pip install -e .
 git clone https://github.com/ethz-asl/reinmav-gym.git
 cd reinmav-gym
 ```
-- The environment is tested on python 3.6. Make sure you have the right python version when i
+- The environment is tested on python 3.6. Make sure you have the right python version when installing the environment
 ```
+pip install -r requirements.txt
 pip install -e .
 ```
 
@@ -100,7 +107,7 @@ import gym
 
 env = gym.make('quadrotor3d-v0').unwrapped
 ```
-'quadrotor3d-v0` is the environment ID that is registered in the gym environment. The list of environment ids in this repo can be found in `gym_reinmav/__init__.py' file.
+`quadrotor3d-v0` is the environment ID that is registered in the gym environment. The list of environment ids in this repo can be found in `gym_reinmav/__init__.py' file.
 The environment can be also be tested using the openai baselines package, for example as the following.
 ```
 python -m gym_reinmav.run --alg=ppo2 --env=quadrotor2d-v0 --network=mlp --play
