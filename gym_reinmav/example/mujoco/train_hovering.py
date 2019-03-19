@@ -52,6 +52,8 @@ def parse_args():
     parser.add_argument('--noptepochs', type=int, required=False, default=4, help='number of training epochs per update')
     parser.add_argument('--num_hidden', type=int, required=False, default=64, help='number of hidden units')
     parser.add_argument('--num_layers', type=int, required=False, default=2, help='number of layers')
+    parser.add_argument('--nsteps', type=int, required=False, default=2048, help='number of steps of the vectorized environment per update')
+    
     #There are more parameters that we can set (e.g., activation and learning rate). Please have a look baselines/ppo2/ppo2.py and baselines/common/models.py
     return parser.parse_args()
 
@@ -107,15 +109,16 @@ def train(args):
     else:
         if alg_kwargs.get('network') is None:
             alg_kwargs['network'] = args.network
+    if args.nsteps:
+        alg_kwargs['nsteps'] = args.nsteps
 
     print('Training {} on {} with arguments \n{}'.format(args.alg, 'Anymal', alg_kwargs))
-
     model = learn(
         env=env,
         seed=seed,
         total_timesteps=total_timesteps,
         **alg_kwargs,
-        load_path=load_path
+        load_path=load_path,
     )
 
     return model, env
