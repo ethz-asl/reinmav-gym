@@ -11,7 +11,7 @@ class MujocoQuadQuaternionEnv(MujocoQuadEnv):
 
     def step(self, a):
         goal_pos = np.array([0.0, 0.0, 1.0])
-        alive_bonus = 100
+        alive_bonus = 0.3
         self.do_simulation(self.clip_action(a), self.frame_skip)
         ob = self._get_obs()
         pos = ob[0:3]
@@ -22,10 +22,10 @@ class MujocoQuadQuaternionEnv(MujocoQuadEnv):
         ang_acc = ob[16:19]
         
 
-        reward_position = - linalg.norm(pos-goal_pos) * 10 
+        reward_position = - linalg.norm(pos-goal_pos) * 0.5 
         reward_linear_velocity = - linalg.norm(lin_vel) * 0.1 
         reward_angular_velocity = - linalg.norm(ang_vel) * 0.1
-        reward_action = - linalg.norm(a)
+        reward_action = - linalg.norm(a)*0.5
         reward_alive = alive_bonus
 
         reward = reward_position \
