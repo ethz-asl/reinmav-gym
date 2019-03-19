@@ -53,6 +53,8 @@ def parse_args():
     parser.add_argument('--num_hidden', type=int, required=False, default=64, help='number of hidden units')
     parser.add_argument('--num_layers', type=int, required=False, default=2, help='number of layers')
     parser.add_argument('--nsteps', type=int, required=False, default=2048, help='number of steps of the vectorized environment per update')
+    parser.add_argument('--logdir', type=str, required=False, default=None, help='log directory')
+    
     
     #There are more parameters that we can set (e.g., activation and learning rate). Please have a look baselines/ppo2/ppo2.py and baselines/common/models.py
     return parser.parse_args()
@@ -155,11 +157,19 @@ def build_env(args):
 
 def main():
     # tensorboard log
-    logdir = os.path.join(os.path.curdir, 'log', 'mujoco')
+
+    
     logformat = ['tensorboard', 'stdout', 'log']
 
     args = parse_args()
     args.play = distutils.util.strtobool(args.play)
+
+    if args.logdir:
+        print(args.logdir)
+        logdir = args.logdir
+    else:
+        logdir = os.path.join(os.path.curdir, 'log', 'mujoco')
+
     if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:
         rank = 0
         logger.configure(dir=logdir, format_strs=logformat)
