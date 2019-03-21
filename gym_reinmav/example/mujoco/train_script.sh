@@ -18,6 +18,6 @@ then
 	LOG_PATH=$2
 	N_STEP=$3
 	N_ENV=$4
-	python ./train_hovering.py --save_path=$MODEL_SAVE_PATH --num_timesteps=$N_STEP --num_env=$N_ENV --play=False --env=MujocoQuadQuat-v0 --logdir=$LOG_PATH
+	python ./train_hovering.py --save_path=$MODEL_SAVE_PATH --num_timesteps=$N_STEP --num_env=$N_ENV --play=False --env=MujocoQuadQuat-v0 --logdir=$LOG_PATH --reward_scale=1.0 --nsteps=4096 --nminibatches=16 --noptepochs=16
 fi
 

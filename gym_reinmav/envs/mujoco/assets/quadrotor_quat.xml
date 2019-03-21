@@ -32,7 +32,7 @@
 		</body>
 	</worldbody>
     <actuator>
-		<motor ctrllimited="true" ctrlrange="0.0 4.0" gear="0  0. 1. 0. 0. 0." site="thrust"/>
+		<motor ctrllimited="true" ctrlrange="0.0 7.0" gear="0  0. 1. 0. 0. 0." site="thrust"/>
 		<velocity ctrllimited="true" ctrlrange="-1 1" gear="0. 0. 0. 1. 0. 0." kv="0.1" site="rateX"/>
 		<velocity ctrllimited="true" ctrlrange="-1 1" gear="0. 0. 0. 0. 1. 0." kv="0.1" site="rateY"/>
 		<velocity ctrllimited="true" ctrlrange="-1 1" gear="0. 0. 0. 0. 0. 1." kv="0.1" site="rateZ"/>

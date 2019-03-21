@@ -11,7 +11,7 @@ class MujocoQuadQuaternionEnv(MujocoQuadEnv):
 
     def step(self, a):
         goal_pos = np.array([0.0, 0.0, 1.0])
-        alive_bonus = 0.3
+        alive_bonus = 0.5e0
         self.do_simulation(self.clip_action(a), self.frame_skip)
         ob = self._get_obs()
         pos = ob[0:3]
@@ -20,12 +20,13 @@ class MujocoQuadQuaternionEnv(MujocoQuadEnv):
         ang_vel= ob[10:13]
         lin_acc = ob[13:16]
         ang_acc = ob[16:19]
+        #print("step a=",self.clip_action(a))
         
 
-        reward_position = - linalg.norm(pos-goal_pos) * 0.5 
-        reward_linear_velocity = - linalg.norm(lin_vel) * 0.1 
-        reward_angular_velocity = - linalg.norm(ang_vel) * 0.1
-        reward_action = - linalg.norm(a)*0.5
+        reward_position = -linalg.norm(pos-goal_pos) * 1e0 
+        reward_linear_velocity = -linalg.norm(lin_vel) * 1e-1 
+        reward_angular_velocity = -linalg.norm(ang_vel) * 1e-1
+        reward_action = -linalg.norm(a)+np.sum(a)*1e-1
         reward_alive = alive_bonus
 
         reward = reward_position \
@@ -59,3 +60,15 @@ class MujocoQuadQuaternionEnv(MujocoQuadEnv):
         qvel[0:3] +=self.np_random.uniform(size=3, low=-0.01, high=0.01)
         self.set_state(qpos, qvel)
         return self._get_obs()
+
+    def clip_action(self, action):
+        """
+        clip action to [0, inf]
+        :param action:
+        :return: clipped action
+        """
+        act_min=[0,-0.5,-0.5,-0.5]
+        act_max=[7,0.5,0.5,0.5]
+        #action = np.clip(action, a_min=-np.inf, a_max=np.inf)
+        action = np.clip(action, a_min=act_min, a_max=act_max)
+        return action
