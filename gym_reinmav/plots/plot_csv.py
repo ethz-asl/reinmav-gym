@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Qt4Agg')
 from baselines.common import plot_util as pu
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,6 +11,7 @@ class plotCsv():
 		self.log_path=log_path
 		self.headers = ['r','l','t','rp','rlv','rav','ra','rlive']
 		self.x_axis_unit="step" #"step" or "time"
+		self.radius=100
 	def loadData(self):
 		self.data = pd.read_csv(self.log_path,names=self.headers,skiprows=1,header=2)
 		if self.x_axis_unit=="time":
@@ -16,26 +19,15 @@ class plotCsv():
 		else:
 			self.x_axis=np.cumsum(self.data.l)
 	def plotData(self):
-		plt.figure('Main params')
-		#plt.plot(np.cumsum(data.l),pu.smooth(data.r, radius=100))
-		plt.plot(self.x_axis,pu.smooth(self.data.r, radius=100))
-		plt.plot(self.x_axis,pu.smooth(self.data.l, radius=100))
-
-		plt.legend(['episode mean reward','episode mean length'])
-		if self.x_axis_unit=="time":
-			plt.xlabel('Time elapsed(s)')
-		else:
-			plt.xlabel('Step')
-		plt.ylabel('reward')
-		plt.grid()
-		
-		plt.figure('Aux params')
-		plt.plot(self.x_axis,pu.smooth(self.data.rp, radius=100))
-		plt.plot(self.x_axis,pu.smooth(self.data.rlv, radius=100))
-		plt.plot(self.x_axis,pu.smooth(self.data.rav, radius=100))
-		plt.plot(self.x_axis,pu.smooth(self.data.ra, radius=100))
-		plt.plot(self.x_axis,pu.smooth(self.data.rlive, radius=100))
-		plt.legend(['pos','lvel','avel','act','live'])
+		plt.figure('All params')
+		plt.plot(self.x_axis,pu.smooth(self.data.r, radius=self.radius))
+		plt.plot(self.x_axis,pu.smooth(self.data.l, radius=self.radius))
+		plt.plot(self.x_axis,pu.smooth(self.data.rp, radius=self.radius))
+		plt.plot(self.x_axis,pu.smooth(self.data.rlv, radius=self.radius))
+		plt.plot(self.x_axis,pu.smooth(self.data.rav, radius=self.radius))
+		plt.plot(self.x_axis,pu.smooth(self.data.ra, radius=self.radius))
+		plt.plot(self.x_axis,pu.smooth(self.data.rlive, radius=self.radius))
+		plt.legend(['episode mean reward','episode mean length','pos','lvel','avel','act','live'])
 		plt.ylabel('reward')
 		if self.x_axis_unit=="time":
 			plt.xlabel('Time elapsed(s)')
