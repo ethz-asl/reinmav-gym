@@ -159,8 +159,7 @@ def main():
     # tensorboard log
 
     
-    #logformat = ['tensorboard', 'stdout', 'log']
-    logformat = ['stdout']
+    logformat = ['tensorboard', 'stdout', 'log']
 
     args = parse_args()
     args.play = distutils.util.strtobool(args.play)
