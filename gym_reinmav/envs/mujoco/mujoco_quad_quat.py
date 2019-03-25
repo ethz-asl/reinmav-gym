@@ -23,7 +23,8 @@ class MujocoQuadQuaternionEnv(MujocoQuadEnv):
         #print("step a=",a)
         
 
-        reward_position = -linalg.norm(pos-goal_pos) * 0.2e-1 
+        #reward_position = -linalg.norm(pos-goal_pos) * 0.2e-1 
+        reward_position = -linalg.norm(pos) * 0.2e-1 
         reward_linear_velocity = -linalg.norm(lin_vel) * 1e-3 
         reward_angular_velocity = -linalg.norm(ang_vel) * 1e-1
         reward_action = -linalg.norm(a)+np.sum(a)*1e-1
@@ -33,10 +34,12 @@ class MujocoQuadQuaternionEnv(MujocoQuadEnv):
                  + reward_linear_velocity \
                  + reward_angular_velocity \
                  + reward_action \
-                 + reward_alive 
-
+                 + reward_alive
+        # notdone = np.isfinite(ob).all() \
+        #           and pos[2] > 0.3 \
+        #           and abs(pos[0]) < 2.0 \
+        #           and abs(pos[1]) < 2.0
         notdone = np.isfinite(ob).all() \
-                  and pos[2] > 0.3 \
                   and abs(pos[0]) < 2.0 \
                   and abs(pos[1]) < 2.0
 
