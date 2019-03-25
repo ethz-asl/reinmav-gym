@@ -37,7 +37,7 @@ $ sudo apt update && sudo apt install libopenmpi-dev
 $ pip install gym
 ```
 3. [Optional] Install mujoco, mujoco-py and gym[all]
-    - See [#for-mujoco-env-(optional)] for more details
+    - See [For mujoco env (optional)](#for-mujoco-env-(optional)) for more details
 4. [Optional] Install the baseline repository to use baseline algorithms to train the models
 ```
 sudo apt-get update && sudo apt-get install cmake libopenmpi-dev python3-dev zlib1g-dev
@@ -107,7 +107,7 @@ $ python test_quadrotor3d.py
 ```sh
 $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.mujoco/mjpro150/bin
 $ # check your nvidia driver version 
-$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia-410 
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia-<YOUR VERSION> 
 ```
 6. install gym by 
 ```sh
