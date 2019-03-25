@@ -27,18 +27,18 @@
 2. pip package version of baselines has some issue. Please build from the source (commit code: [90d66776a49ad5e732b935dfc891bfbd06035ed2](https://github.com/openai/baselines/tree/90d66776a49ad5e732b935dfc891bfbd06035ed2))
 
 ## Install Dependencies
-- Install package dependencies
+
+1. Install package dependencies
 ```sh
 $ sudo apt update && sudo apt install libopenmpi-dev
 ```
-- Install gym. The installation guidelines can be found [here](https://gym.openai.com/docs/)
+2. Install gym. The installation guidelines can be found [here](https://gym.openai.com/docs/)
 ```sh
 $ pip install gym
 ```
-- [Optional] Install mujoco, mujoco-py and gym[all]
-    - See for more details
-
-- [Optional] Install the baseline repository to use baseline algorithms to train the models
+3. [Optional] Install mujoco, mujoco-py and gym[all]
+    - See [#for-mujoco-env-(optional)] for more details
+4. [Optional] Install the baseline repository to use baseline algorithms to train the models
 ```
 sudo apt-get update && sudo apt-get install cmake libopenmpi-dev python3-dev zlib1g-dev
 git clone https://github.com/openai/baselines.git
@@ -48,19 +48,19 @@ pip install -e .
 ```
 
 ## Installing the reinmav-gym package
-- Clone the package and cd into it
+1. Clone the package and cd into it
 ```
 git clone https://github.com/ethz-asl/reinmav-gym.git
 cd reinmav-gym
 ```
-- The environment is tested on python 3.6. Make sure you have the right python version when installing the environment
+2. The environment is tested on python 3.6. Make sure you have the right python version when installing the environment
 ```
 pip install -r requirements.txt
 pip install -e .
 ```
 
 ## Check installation
-You can check your installation using `pip show`
+You can check your installation using ```$ pip show```
 ```
 pip show gym-reinmav
 Name: gym-reinmav
@@ -75,13 +75,13 @@ Requires: gym
 Required-by: 
 ```
 A simple geometric controller is implemented to see if the quadrotor can fly properly.
-```
-cd reinmav-gym/test
-python test_quadrotor2d.py
+```sh
+$ cd reinmav-gym/test
+$ python test_quadrotor2d.py
 ```
 or 
-```
-python test_quadrotor3d.py
+```sh
+$ python test_quadrotor3d.py
 ```
 
 ## For mujoco env (optional)
@@ -99,7 +99,7 @@ python test_quadrotor3d.py
 4. install apt dependencies
     - for example on Ubuntu 16.04:
     ```sh
-    apt-get install -y python-pyglet python3-opengl zlib1g-dev libjpeg-dev patchelf \
+    $ apt-get install -y python-pyglet python3-opengl zlib1g-dev libjpeg-dev patchelf \
         cmake swig libboost-all-dev libsdl2-dev libosmesa6-dev xvfb ffmpeg
     ```
     - see gym [README - Installing everything section](https://github.com/openai/gym#installing-everything) for more details.
@@ -111,7 +111,7 @@ $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia-410
 ```
 6. install gym by 
 ```sh
-pip3 install 'gym[all]'
+$ pip3 install 'gym[all]'
 ```
 
 Note. mujoco200 (MuJoCo 2.0) is not supported yet.
