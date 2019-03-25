@@ -36,9 +36,13 @@ $ sudo apt update && sudo apt install libopenmpi-dev
 ```sh
 $ pip install gym
 ```
-3. [Optional] Install mujoco, mujoco-py and gym[all]
+3. Install pip dependencies by 
+```sh 
+$ pip install -r requirements.txt
+```
+4. [Optional] Install mujoco, mujoco-py and gym[all]
     - See [For mujoco env (optional)](#for-mujoco-env-(optional)) for more details
-4. [Optional] Install the baseline repository to use baseline algorithms to train the models
+5. [Optional] Install the baseline repository to use baseline algorithms to train the models
 ```
 sudo apt-get update && sudo apt-get install cmake libopenmpi-dev python3-dev zlib1g-dev
 git clone https://github.com/openai/baselines.git
@@ -55,7 +59,6 @@ cd reinmav-gym
 ```
 2. The environment is tested on python 3.6. Make sure you have the right python version when installing the environment
 ```
-pip install -r requirements.txt
 pip install -e .
 ```
 
