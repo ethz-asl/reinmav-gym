@@ -136,7 +136,6 @@ class Quadrotor2D(gym.Env):
 		return action 
 
 	def reset(self):
-		print("reset")
 		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(5,)))
 		return np.array(self.state)
 
