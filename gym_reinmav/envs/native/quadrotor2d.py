@@ -72,7 +72,9 @@ class Quadrotor2D(gym.Env):
 		return [seed]
 
 	def step(self, action):
-		thrust = action[0] # Thrust command
+		thrust = 10.0 * action[0] # Thrust command
+		if thrust < 0.0:
+		    thrust = 0.0
 		w = action[1] # Angular velocity command
 
 		state = self.state
@@ -90,8 +92,8 @@ class Quadrotor2D(gym.Env):
 
 		self.state = (pos[0], pos[1], att, vel[0], vel[1])
 
-		done =  linalg.norm(pos, 2) < -self.pos_threshold \
-			or  linalg.norm(pos, 2) > self.pos_threshold \
+		done =  linalg.norm(pos, 2) > 3.0 \
+			or linalg.norm(vel, 2) > 10.0
 			or linalg.norm(vel, 2) < -self.vel_threshold \
 			or linalg.norm(vel, 2) > self.vel_threshold
 		done = bool(done)
@@ -136,7 +138,6 @@ class Quadrotor2D(gym.Env):
 		return action 
 
 	def reset(self):
-		print("reset")
 		self.state = np.array(self.np_random.uniform(low=-1.0, high=1.0, size=(5,)))
 		return np.array(self.state)
 
