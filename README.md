@@ -1,5 +1,5 @@
 # reinmav-gym
-[![Build Status](https://travis-ci.org/ethz-asl/reinmav-gym.png?branch=master)](https://travis-ci.org/ethz-asl/reinmav-gym)
+[![Python Installation Test](https://github.com/ethz-asl/reinmav-gym/actions/workflows/build_test.yml/badge.svg)](https://github.com/ethz-asl/reinmav-gym/actions/workflows/build_test.yml)
 
 `reinmav-gym` is a gym environment for developing mav controllers using the openai gym framework. The environment composes of two environments: `native` which has a built in simulator and `mujoco` which uses the mujoco simulator.
 - `native` environment has a built in dynamics 2D / 3D model that does not require any additional physics engine.

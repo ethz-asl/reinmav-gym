@@ -1,0 +1,28 @@
+name: Python Installation Test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        container:
+          - "px4io/px4-dev-simulation-focal:2020-11-18" # Gazebo 11
+    container: ${{ matrix.container }}
+    steps:
+      - name: Install dependencies
+        run: |
+          apt update
+          apt install libopenmpi-dev
+      - name: Install python dependencies
+        run: pip3 install -r ./requirements.txt
+      - name: Install Package
+        run: pip3 install -e .
