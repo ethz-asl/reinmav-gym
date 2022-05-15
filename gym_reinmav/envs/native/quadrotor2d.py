@@ -93,7 +93,7 @@ class Quadrotor2D(gym.Env):
 		self.state = (pos[0], pos[1], att, vel[0], vel[1])
 
 		done =  linalg.norm(pos, 2) > 3.0 \
-			or linalg.norm(vel, 2) > 10.0
+			or linalg.norm(vel, 2) > 10.0 \
 			or linalg.norm(vel, 2) < -self.vel_threshold \
 			or linalg.norm(vel, 2) > self.vel_threshold
 		done = bool(done)

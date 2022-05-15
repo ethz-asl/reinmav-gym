@@ -305,6 +305,32 @@ class Quadrotor3D(gym.Env):
 		rate(100)
 
 		return True
+	
+	def ros_render(self):
+		import rospy
+		from geometry_msgs.msg import PoseStamped
+
+		pub = rospy.Publisher('pose', PoseStamped, queue_size=10)
+		rospy.init_node('pose_pub', anonymous=True)
+
+		msg = PoseStamped()
+		msg.header.frame_id = "world"
+		msg.header.stamp = rospy.Time.now()
+		pos = np.array([self.state[0], self.state[1], self.state[2]]).flatten()
+		att = np.array([self.state[3], self.state[4], self.state[5], self.state[6]]).flatten()
+		vel = np.array([self.state[7], self.state[8], self.state[9]]).flatten()
+		msg.pose.position.x = pos[0]
+		msg.pose.position.y = pos[1]
+		msg.pose.position.z = pos[2]
+		msg.pose.orientation.x = att[0]
+		msg.pose.orientation.y= att[1]
+		msg.pose.orientation.z = att[2]
+		msg.pose.orientation.w = att[3]
+		pub.publish(msg)
+
+
+
+
 
 	def close(self):
 		if self.viewer:
